@@ -64,6 +64,7 @@ func main() {
 		JSONDecoder:  json.Unmarshal,
 	})
 	apiGroup := app.Group("/api")
+	authGroup := apiGroup.Group("/auth")
 
 	app.Use(fiberzerolog.New(fiberzerolog.Config{Logger: &applogger.Logger}))
 	app.Use(cors.New(cors.Config{
