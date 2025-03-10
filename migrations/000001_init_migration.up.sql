@@ -20,6 +20,7 @@ CREATE TABLE "open_board_user_session" (
    date_created TIMESTAMP NOT NULL DEFAULT (now()),
    date_updated TIMESTAMP,
    expires_on TIMESTAMP NOT NULL,
+   refresh_expires_on TIMESTAMP,
    session_type VARCHAR(32) NOT NULL,
    remember_me BOOLEAN NOT NULL DEFAULT (false),
    access_token TEXT UNIQUE,
