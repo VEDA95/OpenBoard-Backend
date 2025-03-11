@@ -12,5 +12,6 @@ type User struct {
 	FirstName      *string    `json:"first_name" db:"first_name,omitempty"`
 	LastName       *string    `json:"last_name" db:"last_name,omitempty"`
 	Enabled        bool       `json:"enabled" db:"enabled"`
+	EmailVerified  bool       `json:"email_verified" db:"email_verified"`
 	HashedPassword string     `json:"-" db:"hashed_password"`
 }

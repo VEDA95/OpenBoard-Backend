@@ -4,6 +4,7 @@ import (
 	"VEDA95/open_board/api/internal/config"
 	"VEDA95/open_board/api/internal/db"
 	"VEDA95/open_board/api/internal/errors"
+	"VEDA95/open_board/api/internal/http/middleware"
 	"VEDA95/open_board/api/internal/http/routes"
 	"VEDA95/open_board/api/internal/http/validators"
 	applogger "VEDA95/open_board/api/internal/log"
@@ -64,7 +65,7 @@ func main() {
 		JSONDecoder:  json.Unmarshal,
 	})
 	apiGroup := app.Group("/api")
-	authGroup := apiGroup.Group("/auth")
+	authGroup := app.Group("/auth")
 
 	app.Use(fiberzerolog.New(fiberzerolog.Config{Logger: &applogger.Logger}))
 	app.Use(cors.New(cors.Config{
@@ -72,7 +73,16 @@ func main() {
 		AllowMethods: "GET, POST, PATCH, DELETE",
 		AllowHeaders: "Origin, Content-Type, Accept, Authorization",
 	}))
+	authGroup.Post("/login", routes.LocalLogin)
+	authGroup.Post("/refresh", routes.LocalRefresh)
+	authGroup.Post("/logout", routes.LocalLogout)
+	authGroup.Get("/@me", middleware.CheckUserAuthentication, routes.UserInfoGET)
 	apiGroup.Get("/", routes.IndexGET)
+	apiGroup.Get("/users", routes.UsersGET)
+	apiGroup.Post("/users", routes.UsersPOST)
+	apiGroup.Get("/users/:id", routes.UserGET)
+	apiGroup.Patch("/users/:id", routes.UserPATCH)
+	apiGroup.Delete("/users/:id", routes.UserDELETE)
 
 	if err := app.Listen(hostString); err != nil {
 		applogger.Logger.Fatal().Err(err).Msg("Error occurred while running the server")

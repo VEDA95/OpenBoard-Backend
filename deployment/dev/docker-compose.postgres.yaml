@@ -13,5 +13,6 @@ services:
       - POSTGRES_PASSWORD=GNX-0093
       - POSTGRES_USER=Testuser
       - POSTGRES_DB=open_board_api
+      - TZ=America/New_York
 
     restart: always

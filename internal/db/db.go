@@ -60,7 +60,7 @@ func InitializeDBInstance() error {
 }
 
 func (store *DB) One(builder sqlbuilder.Builder, output interface{}) error {
-	query, args := builder.Build()
+	query, args := builder.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	rows, err := store.db.Query(store.context, query, args...)
 
 	if err != nil {
@@ -75,7 +75,7 @@ func (store *DB) One(builder sqlbuilder.Builder, output interface{}) error {
 }
 
 func (store *DB) Many(builder sqlbuilder.Builder, output interface{}) error {
-	query, args := builder.Build()
+	query, args := builder.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	rows, err := store.db.Query(store.context, query, args...)
 
 	if err != nil {
@@ -90,7 +90,7 @@ func (store *DB) Many(builder sqlbuilder.Builder, output interface{}) error {
 }
 
 func (store *DB) Exec(builder sqlbuilder.Builder) error {
-	query, args := builder.Build()
+	query, args := builder.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	_, err := store.db.Exec(store.context, query, args...)
 
 	if err != nil {

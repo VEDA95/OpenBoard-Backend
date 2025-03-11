@@ -10,7 +10,6 @@ require (
 	github.com/goccy/go-json v0.10.5
 	github.com/gofiber/contrib/fiberzerolog v1.0.2
 	github.com/gofiber/fiber/v2 v2.52.6
-	github.com/golang-migrate/migrate/v4 v4.18.2
 	github.com/huandu/go-sqlbuilder v1.34.0
 	github.com/jackc/pgx-zerolog v0.0.0-20230315001418-f978528409eb
 	github.com/jackc/pgx/v5 v5.7.2
@@ -20,9 +19,20 @@ require (
 )
 
 require (
+	dario.cat/mergo v1.0.1 // indirect
 	github.com/alexedwards/argon2id v1.0.0 // indirect
 	github.com/andybalholm/brotli v1.1.0 // indirect
+	github.com/bep/godartsass v1.2.0 // indirect
+	github.com/bep/godartsass/v2 v2.1.0 // indirect
+	github.com/bep/golibsass v1.2.0 // indirect
+	github.com/cli/safeexec v1.0.1 // indirect
+	github.com/creack/pty v1.1.23 // indirect
+	github.com/fatih/color v1.17.0 // indirect
+	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.8 // indirect
+	github.com/gobwas/glob v0.2.3 // indirect
+	github.com/gohugoio/hugo v0.134.3 // indirect
+	github.com/golang-migrate/migrate/v4 v4.18.2 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
@@ -36,8 +46,13 @@ require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.16 // indirect
+	github.com/pelletier/go-toml v1.9.5 // indirect
+	github.com/pelletier/go-toml/v2 v2.2.3 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
+	github.com/spf13/afero v1.11.0 // indirect
+	github.com/spf13/cast v1.7.0 // indirect
 	github.com/stretchr/testify v1.10.0 // indirect
+	github.com/tdewolff/parse/v2 v2.7.15 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasthttp v1.51.0 // indirect
 	github.com/valyala/tcplisten v1.0.0 // indirect
@@ -47,4 +62,5 @@ require (
 	golang.org/x/sync v0.11.0 // indirect
 	golang.org/x/sys v0.30.0 // indirect
 	golang.org/x/text v0.22.0 // indirect
+	google.golang.org/protobuf v1.34.2 // indirect
 )

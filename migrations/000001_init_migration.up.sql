@@ -22,7 +22,6 @@ CREATE TABLE "open_board_user_session" (
    expires_on TIMESTAMP NOT NULL,
    refresh_expires_on TIMESTAMP,
    session_type VARCHAR(32) NOT NULL,
-   remember_me BOOLEAN NOT NULL DEFAULT (false),
    access_token TEXT UNIQUE,
    refresh_token TEXT UNIQUE,
    ip_address VARCHAR(255) NOT NULL,

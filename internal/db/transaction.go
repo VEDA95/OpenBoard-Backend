@@ -13,7 +13,7 @@ type Transaction struct {
 }
 
 func (transaction *Transaction) One(builder sqlbuilder.Builder, output interface{}) error {
-	query, args := builder.Build()
+	query, args := builder.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	rows, err := transaction.tx.Query(transaction.context, query, args...)
 
 	if err != nil {
@@ -28,7 +28,7 @@ func (transaction *Transaction) One(builder sqlbuilder.Builder, output interface
 }
 
 func (transaction *Transaction) Many(builder sqlbuilder.Builder, output interface{}) error {
-	query, args := builder.Build()
+	query, args := builder.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	rows, err := transaction.tx.Query(transaction.context, query, args...)
 
 	if err != nil {
@@ -43,7 +43,7 @@ func (transaction *Transaction) Many(builder sqlbuilder.Builder, output interfac
 }
 
 func (transaction *Transaction) Exec(builder sqlbuilder.Builder) error {
-	query, args := builder.Build()
+	query, args := builder.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	_, err := transaction.tx.Exec(transaction.context, query, args...)
 
 	if err != nil {

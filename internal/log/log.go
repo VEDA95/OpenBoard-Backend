@@ -26,6 +26,7 @@ func InitializeLogger() error {
 		}
 		Logger = zerolog.New(rotationLogger).
 			Output(zerolog.ConsoleWriter{Out: rotationLogger}).
+			Level(zerolog.ErrorLevel).
 			With().
 			Timestamp().
 			Logger()
@@ -33,6 +34,7 @@ func InitializeLogger() error {
 	} else {
 		Logger = zerolog.New(os.Stdout).
 			Output(zerolog.ConsoleWriter{Out: os.Stdout}).
+			Level(zerolog.DebugLevel).
 			With().
 			Timestamp().
 			Logger()

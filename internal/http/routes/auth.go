@@ -12,6 +12,7 @@ import (
 	"github.com/huandu/go-sqlbuilder"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -59,7 +60,7 @@ func LocalLogin(context *fiber.Ctx) error {
 		return errors.CreateValidationError(errs)
 	}
 
-	userQuery := sqlbuilder.Select(userQueryColumns...).From("user")
+	userQuery := sqlbuilder.Select(userQueryColumns...).From("open_board_user")
 	userQuery.Where(userQuery.Equal("username", dataValidator.Username))
 	user := new(auth.User)
 
@@ -72,7 +73,7 @@ func LocalLogin(context *fiber.Ctx) error {
 	}
 
 	if !auth.CheckPasswordHash(dataValidator.Password, user.HashedPassword) {
-		return fiber.NewError(fiber.StatusUnauthorized, "user not authorized")
+		return fiber.NewError(fiber.StatusUnauthorized, "unauthorized")
 	}
 
 	token, err := auth.CreateSessionToken()
@@ -85,8 +86,8 @@ func LocalLogin(context *fiber.Ctx) error {
 	queryColumns := []string{"user_id", "expires_on", "session_type", "access_token", "ip_address", "user_agent"}
 	queryValues := []interface{}{
 		user.Id,
-		now.Local().Add(time.Duration(expiresIn)),
-		dataValidator.ReturnType,
+		now.Local().Add(time.Second * time.Duration(expiresIn)),
+		"local",
 		token,
 		context.IP(),
 		context.Get("User-Agent"),
@@ -103,14 +104,32 @@ func LocalLogin(context *fiber.Ctx) error {
 		queryValues = append(
 			queryValues,
 			true,
-			now.Local().Add(time.Duration(refreshExpiresIn)),
+			now.Local().Add(time.Second*time.Duration(refreshExpiresIn)),
 			refreshToken,
 		)
 	}
 
-	sessionQuery := sqlbuilder.InsertInto("open_board_user_session").Cols(queryColumns...).Values(queryValues...)
+	transaction, err := db.Instance.Begin()
 
-	if err := db.Instance.Exec(sessionQuery); err != nil {
+	if err != nil {
+		return err
+	}
+
+	sessionQuery := sqlbuilder.InsertInto("open_board_user_session").Cols(queryColumns...).Values(queryValues...)
+	updateUserQuery := sqlbuilder.Update("open_board_user")
+	updateUserQuery.
+		Where(updateUserQuery.Equal("id", user.Id)).
+		Set(updateUserQuery.Equal("last_login", now))
+
+	if err := transaction.Exec(sessionQuery); err != nil {
+		return err
+	}
+
+	if err := transaction.Exec(updateUserQuery); err != nil {
+		return err
+	}
+
+	if err := transaction.Commit(); err != nil {
 		return err
 	}
 
@@ -141,6 +160,7 @@ func LocalLogin(context *fiber.Ctx) error {
 		return nil
 	}
 
+	user.LastLogin = &now
 	responseMap := fiber.Map{
 		"message":      fmt.Sprintf("%s has been successfully logged in", user.Username),
 		"user":         user,
@@ -149,7 +169,6 @@ func LocalLogin(context *fiber.Ctx) error {
 	}
 
 	if dataValidator.Remember {
-		responseMap["remember_me"] = true
 		responseMap["refresh_expires_in"] = refreshExpiresIn
 		responseMap["refresh_token"] = queryValues[len(queryValues)-1]
 	}
@@ -162,6 +181,16 @@ func LocalLogin(context *fiber.Ctx) error {
 }
 
 func LocalLogout(context *fiber.Ctx) error {
+	returnValidator := new(validators.ReturnValidator)
+
+	if err := context.BodyParser(returnValidator); err != nil {
+		return err
+	}
+
+	if errs := validators.Instance.Validate(returnValidator); len(errs) > 0 {
+		return errors.CreateValidationError(errs)
+	}
+
 	session := context.Locals("auth_session").(auth.UserSession)
 	deleteSessionQuery := sqlbuilder.DeleteFrom("open_board_user_session")
 	deleteSessionQuery.Where(deleteSessionQuery.Equal("id", session.Id))
@@ -170,11 +199,11 @@ func LocalLogout(context *fiber.Ctx) error {
 		return err
 	}
 
-	if session.SessionType == "session" {
+	if returnValidator.ReturnType == "session" {
 		context.Status(fiber.StatusOK)
 		context.ClearCookie("open_board_session")
 
-		if session.Remember {
+		if session.RefreshToken != nil && len(*session.RefreshToken) > 0 {
 			context.ClearCookie("open_board_session_remember_me")
 		}
 
@@ -184,147 +213,177 @@ func LocalLogout(context *fiber.Ctx) error {
 	return responses.JSONResponse(
 		context,
 		fiber.StatusOK,
-		responses.GenericMessage{Message: fmt.Sprintf("%s logged out successfully", session.User.Username)},
+		responses.OKResponse(
+			fiber.StatusOK,
+			responses.GenericMessage{Message: fmt.Sprintf("%s logged out successfully", session.User.Username)}),
 	)
 }
 
 func LocalRefresh(context *fiber.Ctx) error {
-	return nil
-}
+	expiresInEnv := os.Getenv("AUTH_SESSION_EXPIRES_IN")
+	refreshExpiresInEnv := os.Getenv("AUTH_SESSION_REFRESH_EXPIRES_IN")
 
-func UserInfoGET(context *fiber.Ctx) error {
-	session := context.Locals("auth_session").(auth.UserSession)
+	if len(expiresInEnv) == 0 || len(refreshExpiresInEnv) == 0 {
+		return genericError.New("AUTH_SESSION_EXPIRES_IN and/or AUTH_SESSION_REFRESH_EXPIRES_IN environment variable(s) was not set")
+	}
 
-	return responses.JSONResponse(context, fiber.StatusOK, session.User)
-}
+	expiresIn, err := strconv.Atoi(expiresInEnv)
 
-func UsersGET(context *fiber.Ctx) error {
-	users := make([]auth.User, 0)
-	userQuery := sqlbuilder.Select(userQueryColumns...).From("open_board_user")
-
-	if err := db.Instance.Many(userQuery, &users); err != nil {
+	if err != nil {
 		return err
 	}
 
-	return responses.JSONResponse(context, fiber.StatusOK, users)
-}
+	refreshExpiresIn, err := strconv.Atoi(refreshExpiresInEnv)
 
-func UsersPOST(context *fiber.Ctx) error {
-	createValidator := new(validators.CreateUserValidator)
-
-	if err := context.BodyParser(createValidator); err != nil {
+	if err != nil {
 		return err
 	}
 
-	if errs := validators.Instance.Validate(createValidator); len(errs) > 0 {
+	returnValidator := new(validators.ReturnValidator)
+
+	if err := context.BodyParser(returnValidator); err != nil {
+		return err
+	}
+
+	if errs := validators.Instance.Validate(returnValidator); len(errs) > 0 {
 		return errors.CreateValidationError(errs)
 	}
 
-	queryColumns := []string{"username", "email", "hashed_password"}
-	queryValues := []interface{}{
-		createValidator.Username,
-		createValidator.Email,
-		auth.HashPassword(createValidator.Password),
+	authHeader := context.Get("Authorization")
+
+	if len(authHeader) == 0 {
+		authCookie := context.Cookies("open_board_session_remember_me", "")
+
+		if len(authCookie) == 0 {
+			return fiber.NewError(fiber.StatusUnauthorized, "unauthorized")
+		}
+
+		authHeader = authCookie
 	}
 
-	if createValidator.FirstName != nil && len(*createValidator.FirstName) > 0 {
-		queryColumns = append(queryColumns, "first_name")
-		queryValues = append(queryValues, *createValidator.FirstName)
+	authHeaderSplit := strings.Split(authHeader, " ")
+
+	if len(authHeaderSplit) < 2 {
+		return fiber.NewError(fiber.StatusUnauthorized, "unauthorized")
 	}
 
-	if createValidator.LastName != nil && len(*createValidator.LastName) > 0 {
-		queryColumns = append(queryColumns, "last_name")
-		queryValues = append(queryValues, *createValidator.LastName)
-	}
+	session := new(auth.UserSession)
+	now := time.Now().Local()
+	authToken := authHeaderSplit[1]
+	sessionQuery := sqlbuilder.Select(
+		"id",
+		"date_created",
+		"date_updated",
+		"expires_on",
+		"refresh_expires_on",
+		"session_type",
+		"access_token",
+		"refresh_token",
+		"ip_address",
+		"user_agent",
+		"additional_info",
+		"open_board_user.id",
+		"open_board_user.date_created",
+		"open_board_user.date_updated",
+		"open_board_user.last_login",
+		"open_board_user.username",
+		"open_board_user.email",
+		"open_board_user.first_name",
+		"open_board_user.last_name",
+		"open_board_user.hashed_password",
+		"open_board_user.enabled",
+		"open_board_user.email_verified",
+	).From("open_board_user_session")
+	sessionQuery.
+		Where(sessionQuery.Equal("refresh_token", authToken)).
+		Join("open_board_user", "open_board_user_session.user_id = open_board_user.id")
 
-	var userId string
-	createUserQuery := sqlbuilder.InsertInto("open_board_user").Cols(queryColumns...).Values(queryValues...).Returning("id")
-
-	if err := db.Instance.One(createUserQuery, &userId); err != nil {
+	if err := db.Instance.One(sessionQuery, session); err != nil {
 		return err
 	}
 
-	user := new(auth.User)
-	userQuery := sqlbuilder.Select(userQueryColumns...).From("open_board_user")
-	userQuery.Where(userQuery.Equal("id", userId))
+	if session == nil {
+		return fiber.NewError(fiber.StatusNotFound, "token not found")
+	}
 
-	if err := db.Instance.One(userQuery, user); err != nil {
+	if session.RefreshExpiresOn.After(now) {
+		deleteSessionQuery := sqlbuilder.DeleteFrom("open_board_user_session")
+		deleteSessionQuery.Where(deleteSessionQuery.Equal("id", session.Id))
+
+		if err := db.Instance.Exec(deleteSessionQuery); err != nil {
+			return err
+		}
+
+		if returnValidator.ReturnType == "session" {
+			context.ClearCookie("open_board_session", "open_board_session_remember_me")
+		}
+
+		return fiber.NewError(fiber.StatusUnauthorized, "unauthorized")
+	}
+
+	accessToken, err := auth.CreateSessionToken()
+
+	if err != nil {
 		return err
 	}
 
-	return responses.JSONResponse(
-		context,
-		fiber.StatusCreated,
-		fiber.Map{
-			"message": fmt.Sprintf("The user: %s has been successfully created!", user.Username),
-			"user":    user,
-		},
-	)
-}
+	refreshToken, err := auth.CreateSessionToken()
 
-func UserGET(context *fiber.Ctx) error {
-	paramValidator := new(validators.ParamValidator)
-
-	if err := context.ParamsParser(paramValidator); err != nil {
+	if err != nil {
 		return err
 	}
 
-	if errs := validators.Instance.Validate(paramValidator); len(errs) > 0 {
-		return errors.CreateValidationError(errs)
-	}
+	expiresOn := now.Add(time.Second * time.Duration(expiresIn))
+	refreshExpiresOn := now.Add(time.Second * time.Duration(refreshExpiresIn))
+	updateSessionQuery := sqlbuilder.Update("open_board_user_session")
+	updateSessionQuery.
+		Where(updateSessionQuery.Equal("id", session.Id)).
+		Set(
+			sessionQuery.Equal("date_updated", now),
+			sessionQuery.Equal("expires_on", expiresOn),
+			sessionQuery.Equal("refresh_expires_on", refreshExpiresOn),
+			sessionQuery.Equal("access_token", accessToken),
+			sessionQuery.Equal("refresh_token", refreshToken),
+		)
 
-	user := new(auth.User)
-	userQuery := sqlbuilder.Select(userQueryColumns...).From("open_board_user")
-	userQuery.Where(userQuery.Equal("id", paramValidator.Id))
-
-	if err := db.Instance.One(userQuery, user); err != nil {
+	if err := db.Instance.Exec(updateSessionQuery); err != nil {
 		return err
 	}
 
-	if user == nil {
-		return fiber.NewError(fiber.StatusNotFound, "user not found")
-	}
+	if returnValidator.ReturnType == "session" {
+		context.Status(fiber.StatusOK)
+		context.Cookie(&fiber.Cookie{
+			Name:     "open_board_session",
+			Value:    accessToken,
+			Expires:  expiresOn,
+			HTTPOnly: true,
+			Secure:   false,
+			Path:     "/",
+			Domain:   "localhost:8080",
+		})
+		context.Cookie(&fiber.Cookie{
+			Name:     "open_board_session_remember_me",
+			Value:    refreshToken,
+			Expires:  refreshExpiresOn,
+			HTTPOnly: true,
+			Secure:   false,
+			Path:     "/",
+			Domain:   "localhost:8080",
+		})
 
-	return responses.JSONResponse(context, fiber.StatusOK, user)
-}
-
-func UserPATCH(context *fiber.Ctx) error {
-	return nil
-}
-
-func UserDelete(context *fiber.Ctx) error {
-	paramValidator := new(validators.ParamValidator)
-
-	if err := context.ParamsParser(paramValidator); err != nil {
-		return err
-	}
-
-	if errs := validators.Instance.Validate(paramValidator); len(errs) > 0 {
-		return errors.CreateValidationError(errs)
-	}
-
-	user := new(auth.User)
-	userQuery := sqlbuilder.Select(userQueryColumns...).From("open_board_user")
-	userQuery.Where(userQuery.Equal("id", paramValidator.Id))
-
-	if err := db.Instance.One(userQuery, user); err != nil {
-		return err
-	}
-
-	if user == nil {
-		return fiber.NewError(fiber.StatusNotFound, "user not found")
-	}
-
-	deleteUserQuery := sqlbuilder.DeleteFrom("open_board_user")
-	deleteUserQuery.Where(deleteUserQuery.Equal("id", paramValidator.Id))
-
-	if err := db.Instance.Exec(deleteUserQuery); err != nil {
-		return err
+		return nil
 	}
 
 	return responses.JSONResponse(
 		context,
 		fiber.StatusOK,
-		responses.GenericMessage{Message: fmt.Sprintf("user: %s has been successfully deleted!", user.Username)},
+		responses.OKResponse(fiber.StatusOK, fiber.Map{
+			"message":            fmt.Sprintf("%s auth session has been successfully refreshed", session.User.Username),
+			"user":               session.User,
+			"access_token":       accessToken,
+			"refresh_token":      refreshToken,
+			"expires_in":         expiresIn,
+			"refresh_expires_in": refreshExpiresOn,
+		}),
 	)
 }

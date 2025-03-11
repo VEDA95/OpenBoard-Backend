@@ -1,7 +1,7 @@
 package validators
 
 type LocalLoginValidator struct {
-	ReturnType string `json:"type" validate:"required,one=token session"`
+	ReturnType string `json:"type" validate:"required,oneof=token session"`
 	Username   string `json:"username" validate:"required,min=1"`
 	Password   string `json:"password" validate:"required,min=8"`
 	Remember   bool   `json:"remember_me,omitempty" validate:"omitempty" default:"false"`
