@@ -82,11 +82,11 @@ func LocalLogin(context *fiber.Ctx) error {
 		return err
 	}
 
-	now := time.Now()
+	now := time.Now().Local()
 	queryColumns := []string{"user_id", "expires_on", "session_type", "access_token", "ip_address", "user_agent"}
 	queryValues := []interface{}{
 		user.Id,
-		now.Local().Add(time.Second * time.Duration(expiresIn)),
+		now.Add(time.Second * time.Duration(expiresIn)),
 		"local",
 		token,
 		context.IP(),
@@ -100,11 +100,10 @@ func LocalLogin(context *fiber.Ctx) error {
 			return err
 		}
 
-		queryColumns = append(queryColumns, "remember_me", "refresh_expires_in", "refresh_token")
+		queryColumns = append(queryColumns, "refresh_expires_on", "refresh_token")
 		queryValues = append(
 			queryValues,
-			true,
-			now.Local().Add(time.Second*time.Duration(refreshExpiresIn)),
+			now.Add(time.Second*time.Duration(refreshExpiresIn)),
 			refreshToken,
 		)
 	}
@@ -267,21 +266,21 @@ func LocalRefresh(context *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusUnauthorized, "unauthorized")
 	}
 
-	session := new(auth.UserSession)
+	var session auth.UserSession
 	now := time.Now().Local()
 	authToken := authHeaderSplit[1]
 	sessionQuery := sqlbuilder.Select(
-		"id",
-		"date_created",
-		"date_updated",
-		"expires_on",
-		"refresh_expires_on",
-		"session_type",
-		"access_token",
-		"refresh_token",
-		"ip_address",
-		"user_agent",
-		"additional_info",
+		"open_board_user_session.id AS session_id",
+		"open_board_user_session.date_created AS session_date_created",
+		"open_board_user_session.date_updated AS session_date_updated",
+		"open_board_user_session.expires_on AS session_expires_on",
+		"open_board_user_session.refresh_expires_on AS session_refresh_expires_on",
+		"open_board_user_session.session_type AS user_session_type",
+		"open_board_user_session.access_token AS session_access_token",
+		"open_board_user_session.refresh_token AS session_refresh_token",
+		"open_board_user_session.ip_address AS session_ip_address",
+		"open_board_user_session.user_agent AS session_user_agent",
+		"open_board_user_session.additional_info AS session_additional_info",
 		"open_board_user.id",
 		"open_board_user.date_created",
 		"open_board_user.date_updated",
@@ -298,12 +297,16 @@ func LocalRefresh(context *fiber.Ctx) error {
 		Where(sessionQuery.Equal("refresh_token", authToken)).
 		Join("open_board_user", "open_board_user_session.user_id = open_board_user.id")
 
-	if err := db.Instance.One(sessionQuery, session); err != nil {
+	if err := db.Instance.One(sessionQuery, &session); err != nil {
 		return err
 	}
 
-	if session == nil {
+	if len(session.Id) == 0 {
 		return fiber.NewError(fiber.StatusNotFound, "token not found")
+	}
+
+	if session.RefreshExpiresOn == nil {
+		return fiber.NewError(fiber.StatusUnauthorized, "unauthorized")
 	}
 
 	if session.RefreshExpiresOn.After(now) {

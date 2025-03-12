@@ -30,20 +30,20 @@ func CheckUserAuthentication(context *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusUnauthorized, "unauthorized")
 	}
 
-	session := new(auth.UserSession)
+	var session auth.UserSession
 	authToken := authHeaderSplit[1]
 	sessionQuery := sqlbuilder.Select(
-		"id",
-		"date_created",
-		"date_updated",
-		"expires_on",
-		"refresh_expires_on",
-		"session_type",
-		"access_token",
-		"refresh_token",
-		"ip_address",
-		"user_agent",
-		"additional_info",
+		"open_board_user_session.id AS session_id",
+		"open_board_user_session.date_created AS session_date_created",
+		"open_board_user_session.date_updated AS session_date_updated",
+		"open_board_user_session.expires_on AS session_expires_on",
+		"open_board_user_session.refresh_expires_on AS session_refresh_expires_on",
+		"open_board_user_session.session_type AS user_session_type",
+		"open_board_user_session.access_token AS session_access_token",
+		"open_board_user_session.refresh_token AS session_refresh_token",
+		"open_board_user_session.ip_address AS session_ip_address",
+		"open_board_user_session.user_agent AS session_user_agent",
+		"open_board_user_session.additional_info AS session_additional_info",
 		"open_board_user.id",
 		"open_board_user.date_created",
 		"open_board_user.date_updated",
@@ -60,16 +60,18 @@ func CheckUserAuthentication(context *fiber.Ctx) error {
 		Where(sessionQuery.Equal("access_token", authToken)).
 		Join("open_board_user", "open_board_user_session.user_id = open_board_user.id")
 
-	if err := db.Instance.One(sessionQuery, session); err != nil {
+	if err := db.Instance.One(sessionQuery, &session); err != nil {
 		return err
 	}
 
-	if session == nil {
+	if len(session.Id) == 0 {
 		return fiber.NewError(fiber.StatusNotFound, "token not found")
 	}
 
-	if session.ExpiresOn.After(time.Now().Local()) {
-		if session.RefreshExpiresOn.After(time.Now().Local()) {
+	now := time.Now().Local()
+
+	if session.ExpiresOn.After(now) {
+		if session.RefreshExpiresOn != nil && session.RefreshExpiresOn.After(now) {
 			deleteSessionQuery := sqlbuilder.DeleteFrom("open_board_user_session")
 			deleteSessionQuery.Where(deleteSessionQuery.Equal("id", session.Id))
 

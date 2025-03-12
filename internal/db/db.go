@@ -68,6 +68,10 @@ func (store *DB) One(builder sqlbuilder.Builder, output interface{}) error {
 	}
 
 	if err := pgxscan.ScanOne(output, rows); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil
+		}
+		
 		return err
 	}
 
