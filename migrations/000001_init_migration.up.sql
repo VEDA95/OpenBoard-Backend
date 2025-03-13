@@ -2,9 +2,9 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 CREATE TABLE "open_board_user" (
     "id" UUID PRIMARY KEY DEFAULT (uuid_generate_v4()),
-    "date_created" TIMESTAMP NOT NULL DEFAULT (now()),
-    "date_updated" TIMESTAMP,
-    "last_login" TIMESTAMP,
+    "date_created" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT (now()),
+    "date_updated" TIMESTAMP WITH TIME ZONE,
+    "last_login" TIMESTAMP WITH TIME ZONE,
     "username" VARCHAR(255) UNIQUE NOT NULL,
     "email" VARCHAR(255) UNIQUE NOT NULL,
     "first_name" VARCHAR(255),
@@ -17,10 +17,10 @@ CREATE TABLE "open_board_user" (
 CREATE TABLE "open_board_user_session" (
    id UUID PRIMARY KEY DEFAULT (uuid_generate_v4()),
    user_id UUID NOT NULL,
-   date_created TIMESTAMP NOT NULL DEFAULT (now()),
-   date_updated TIMESTAMP,
-   expires_on TIMESTAMP NOT NULL,
-   refresh_expires_on TIMESTAMP,
+   date_created TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT (now()),
+   date_updated TIMESTAMP WITH TIME ZONE,
+   expires_on TIMESTAMP WITH TIME ZONE NOT NULL,
+   refresh_expires_on TIMESTAMP WITH TIME ZONE,
    session_type VARCHAR(32) NOT NULL,
    access_token TEXT UNIQUE,
    refresh_token TEXT UNIQUE,

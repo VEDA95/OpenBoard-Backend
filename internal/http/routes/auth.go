@@ -82,7 +82,7 @@ func LocalLogin(context *fiber.Ctx) error {
 		return err
 	}
 
-	now := time.Now().Local()
+	now := time.Now()
 	queryColumns := []string{"user_id", "expires_on", "session_type", "access_token", "ip_address", "user_agent"}
 	queryValues := []interface{}{
 		user.Id,
@@ -309,7 +309,7 @@ func LocalRefresh(context *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusUnauthorized, "unauthorized")
 	}
 
-	if session.RefreshExpiresOn.After(now) {
+	if now.Before(*session.RefreshExpiresOn) {
 		deleteSessionQuery := sqlbuilder.DeleteFrom("open_board_user_session")
 		deleteSessionQuery.Where(deleteSessionQuery.Equal("id", session.Id))
 

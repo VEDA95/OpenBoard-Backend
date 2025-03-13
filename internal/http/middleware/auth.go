@@ -3,6 +3,7 @@ package middleware
 import (
 	"VEDA95/open_board/api/internal/auth"
 	"VEDA95/open_board/api/internal/db"
+	"VEDA95/open_board/api/internal/log"
 	"github.com/gofiber/fiber/v2"
 	"github.com/huandu/go-sqlbuilder"
 	"strings"
@@ -68,10 +69,14 @@ func CheckUserAuthentication(context *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusNotFound, "token not found")
 	}
 
-	now := time.Now().Local()
+	now := time.Now()
 
-	if session.ExpiresOn.After(now) {
-		if session.RefreshExpiresOn != nil && session.RefreshExpiresOn.After(now) {
+	log.Logger.Debug().Time("now", now).Msg("current time")
+	log.Logger.Debug().Time("session_expires_on", session.ExpiresOn).Time("session_refresh_expires_on", *session.RefreshExpiresOn).Msg("session expiration date")
+	log.Logger.Debug().Bool("is_after_expiration", now.After(session.ExpiresOn)).Bool("is_after_refresh_expiration", now.After(*session.RefreshExpiresOn)).Msg("is current time past the expiration date")
+
+	if now.After(session.ExpiresOn) {
+		if session.RefreshExpiresOn != nil && now.After(*session.RefreshExpiresOn) {
 			deleteSessionQuery := sqlbuilder.DeleteFrom("open_board_user_session")
 			deleteSessionQuery.Where(deleteSessionQuery.Equal("id", session.Id))
 

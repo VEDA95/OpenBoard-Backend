@@ -8,11 +8,12 @@ services:
 
     volumes:
       - ./data/postgres:/var/lib/postgresql/data
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
 
     environment:
       - POSTGRES_PASSWORD=GNX-0093
       - POSTGRES_USER=Testuser
       - POSTGRES_DB=open_board_api
-      - TZ=America/New_York
 
     restart: always
