@@ -25,5 +25,5 @@ go.work.sum
 .idea
 .vscode
 deployment/dev/data
-builds/
+build/
 
