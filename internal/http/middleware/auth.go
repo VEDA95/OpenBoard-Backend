@@ -33,33 +33,8 @@ func CheckUserAuthentication(context *fiber.Ctx) error {
 
 	var session auth.UserSession
 	authToken := authHeaderSplit[1]
-	sessionQuery := sqlbuilder.Select(
-		"open_board_user_session.id AS session_id",
-		"open_board_user_session.date_created AS session_date_created",
-		"open_board_user_session.date_updated AS session_date_updated",
-		"open_board_user_session.expires_on AS session_expires_on",
-		"open_board_user_session.refresh_expires_on AS session_refresh_expires_on",
-		"open_board_user_session.session_type AS user_session_type",
-		"open_board_user_session.access_token AS session_access_token",
-		"open_board_user_session.refresh_token AS session_refresh_token",
-		"open_board_user_session.ip_address AS session_ip_address",
-		"open_board_user_session.user_agent AS session_user_agent",
-		"open_board_user_session.additional_info AS session_additional_info",
-		"open_board_user.id",
-		"open_board_user.date_created",
-		"open_board_user.date_updated",
-		"open_board_user.last_login",
-		"open_board_user.username",
-		"open_board_user.email",
-		"open_board_user.first_name",
-		"open_board_user.last_name",
-		"open_board_user.hashed_password",
-		"open_board_user.enabled",
-		"open_board_user.email_verified",
-	).From("open_board_user_session")
-	sessionQuery.
-		Where(sessionQuery.Equal("access_token", authToken)).
-		Join("open_board_user", "open_board_user_session.user_id = open_board_user.id")
+	sessionQuery := auth.GetSessionQuery()
+	sessionQuery.Where(sessionQuery.Equal("access_token", authToken))
 
 	if err := db.Instance.One(sessionQuery, &session); err != nil {
 		return err

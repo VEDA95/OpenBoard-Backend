@@ -19,10 +19,9 @@ func UserInfoGET(context *fiber.Ctx) error {
 }
 
 func UsersGET(context *fiber.Ctx) error {
-	users := make([]auth.User, 0)
-	userQuery := sqlbuilder.Select(userQueryColumns...).From("open_board_user")
+	users, err := auth.GetUsers()
 
-	if err := db.Instance.Many(userQuery, &users); err != nil {
+	if err != nil {
 		return err
 	}
 
@@ -66,11 +65,9 @@ func UsersPOST(context *fiber.Ctx) error {
 		return err
 	}
 
-	user := new(auth.User)
-	userQuery := sqlbuilder.Select(userQueryColumns...).From("open_board_user")
-	userQuery.Where(userQuery.Equal("id", userId))
+	user, err := auth.GetUser(userId)
 
-	if err := db.Instance.One(userQuery, user); err != nil {
+	if err != nil {
 		return err
 	}
 
@@ -95,11 +92,9 @@ func UserGET(context *fiber.Ctx) error {
 		return errors.CreateValidationError(errs)
 	}
 
-	user := new(auth.User)
-	userQuery := sqlbuilder.Select(userQueryColumns...).From("open_board_user")
-	userQuery.Where(userQuery.Equal("id", paramValidator.Id))
+	user, err := auth.GetUser(paramValidator.Id)
 
-	if err := db.Instance.One(userQuery, user); err != nil {
+	if err != nil {
 		return err
 	}
 
@@ -121,11 +116,9 @@ func UserPATCH(context *fiber.Ctx) error {
 		return errors.CreateValidationError(errs)
 	}
 
-	user := new(auth.User)
-	userQuery := sqlbuilder.Select(userQueryColumns...).From("open_board_user")
-	userQuery.Where(userQuery.Equal("id", paramValidator.Id))
+	user, err := auth.GetUser(paramValidator.Id)
 
-	if err := db.Instance.One(userQuery, user); err != nil {
+	if err != nil {
 		return err
 	}
 
@@ -146,30 +139,30 @@ func UserPATCH(context *fiber.Ctx) error {
 	updateUserQuery := sqlbuilder.Update("open_board_user")
 	updateUserQuery.
 		Where(updateUserQuery.Equal("id", paramValidator.Id)).
-		Set(updateUserQuery.Equal("date_updated", time.Now().Local()))
+		Set(updateUserQuery.Assign("date_updated", time.Now().Local()))
 
 	if updateUserValidator.Username != nil && len(*updateUserValidator.Username) > 0 && *updateUserValidator.Username != user.Username {
-		updateUserQuery.SetMore(updateUserQuery.Equal("username", *updateUserValidator.Username))
+		updateUserQuery.SetMore(updateUserQuery.Assign("username", *updateUserValidator.Username))
 	}
 
 	if updateUserValidator.Email != nil && len(*updateUserValidator.Email) > 0 && *updateUserValidator.Email != user.Email {
-		updateUserQuery.SetMore(updateUserQuery.Equal("email", updateUserValidator.Email))
+		updateUserQuery.SetMore(updateUserQuery.Assign("email", updateUserValidator.Email))
 	}
 
 	if updateUserValidator.FirstName != nil && updateUserValidator.FirstName != user.FirstName {
 		if len(*updateUserValidator.FirstName) == 0 && user.FirstName != nil {
-			updateUserQuery.SetMore(updateUserQuery.Equal("first_name", nil))
+			updateUserQuery.SetMore(updateUserQuery.Assign("first_name", nil))
 
 		} else {
-			updateUserQuery.SetMore(updateUserQuery.Equal("first_name", updateUserValidator.FirstName))
+			updateUserQuery.SetMore(updateUserQuery.Assign("first_name", updateUserValidator.FirstName))
 		}
 	}
 
 	if updateUserValidator.LastName != nil && updateUserValidator.LastName != user.LastName {
 		if len(*updateUserValidator.LastName) == 0 && user.LastName != nil {
-			updateUserQuery.SetMore(updateUserQuery.Equal("last_name", nil))
+			updateUserQuery.SetMore(updateUserQuery.Assign("last_name", nil))
 		} else {
-			updateUserQuery.SetMore(updateUserQuery.Equal("last_name", updateUserValidator.LastName))
+			updateUserQuery.SetMore(updateUserQuery.Assign("last_name", updateUserValidator.LastName))
 		}
 	}
 
@@ -177,10 +170,9 @@ func UserPATCH(context *fiber.Ctx) error {
 		return err
 	}
 
-	userQuery = sqlbuilder.Select(userQueryColumns...).From("open_board_user")
-	userQuery.Where(userQuery.Equal("id", paramValidator.Id))
+	user, err = auth.GetUser(paramValidator.Id)
 
-	if err := db.Instance.One(userQuery, user); err != nil {
+	if err != nil {
 		return err
 	}
 
@@ -205,11 +197,9 @@ func UserDELETE(context *fiber.Ctx) error {
 		return errors.CreateValidationError(errs)
 	}
 
-	user := new(auth.User)
-	userQuery := sqlbuilder.Select(userQueryColumns...).From("open_board_user")
-	userQuery.Where(userQuery.Equal("id", paramValidator.Id))
+	user, err := auth.GetUser(paramValidator.Id)
 
-	if err := db.Instance.One(userQuery, user); err != nil {
+	if err != nil {
 		return err
 	}
 
