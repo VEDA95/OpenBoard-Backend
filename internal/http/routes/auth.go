@@ -118,7 +118,7 @@ func LocalLogin(context *fiber.Ctx) error {
 	updateUserQuery := sqlbuilder.Update("open_board_user")
 	updateUserQuery.
 		Where(updateUserQuery.Equal("id", user.Id)).
-		Set(updateUserQuery.Equal("last_login", now))
+		Set(updateUserQuery.Assign("last_login", now))
 
 	if err := transaction.Exec(sessionQuery); err != nil {
 		return err
@@ -267,7 +267,7 @@ func LocalRefresh(context *fiber.Ctx) error {
 	}
 
 	var session auth.UserSession
-	now := time.Now().Local()
+	now := time.Now()
 	authToken := authHeaderSplit[1]
 	sessionQuery := sqlbuilder.Select(
 		"open_board_user_session.id AS session_id",
@@ -309,7 +309,7 @@ func LocalRefresh(context *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusUnauthorized, "unauthorized")
 	}
 
-	if now.Before(*session.RefreshExpiresOn) {
+	if now.After(*session.RefreshExpiresOn) {
 		deleteSessionQuery := sqlbuilder.DeleteFrom("open_board_user_session")
 		deleteSessionQuery.Where(deleteSessionQuery.Equal("id", session.Id))
 
@@ -342,11 +342,11 @@ func LocalRefresh(context *fiber.Ctx) error {
 	updateSessionQuery.
 		Where(updateSessionQuery.Equal("id", session.Id)).
 		Set(
-			sessionQuery.Equal("date_updated", now),
-			sessionQuery.Equal("expires_on", expiresOn),
-			sessionQuery.Equal("refresh_expires_on", refreshExpiresOn),
-			sessionQuery.Equal("access_token", accessToken),
-			sessionQuery.Equal("refresh_token", refreshToken),
+			updateSessionQuery.Assign("date_updated", now),
+			updateSessionQuery.Assign("expires_on", expiresOn),
+			updateSessionQuery.Assign("refresh_expires_on", refreshExpiresOn),
+			updateSessionQuery.Assign("access_token", accessToken),
+			updateSessionQuery.Assign("refresh_token", refreshToken),
 		)
 
 	if err := db.Instance.Exec(updateSessionQuery); err != nil {
