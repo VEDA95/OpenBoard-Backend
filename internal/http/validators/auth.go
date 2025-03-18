@@ -41,3 +41,7 @@ type UpdateRoleValidator struct {
 type CreatePermissionValidator struct {
 	Path string `json:"path" validate:"required,min=1,max=255"`
 }
+
+type UpdatePermissionValidator struct {
+	Path *string `json:"path,omitempty" validate:"omitempty,min=1,max=255"`
+}
