@@ -100,7 +100,7 @@ func RolesPOST(context *fiber.Ctx) error {
 func RoleGET(context *fiber.Ctx) error {
 	paramValidator := new(validators.ParamValidator)
 
-	if err := context.BodyParser(paramValidator); err != nil {
+	if err := context.ParamsParser(paramValidator); err != nil {
 		return err
 	}
 
@@ -124,21 +124,11 @@ func RoleGET(context *fiber.Ctx) error {
 func RolePATCH(context *fiber.Ctx) error {
 	paramValidator := new(validators.ParamValidator)
 
-	if err := context.BodyParser(paramValidator); err != nil {
+	if err := context.ParamsParser(paramValidator); err != nil {
 		return err
 	}
 
 	if errs := validators.Instance.Validate(paramValidator); len(errs) > 0 {
-		return errors.CreateValidationError(errs)
-	}
-
-	dataValidator := new(validators.UpdateRoleValidator)
-
-	if err := context.BodyParser(dataValidator); err != nil {
-		return err
-	}
-
-	if errs := validators.Instance.Validate(dataValidator); len(errs) > 0 {
 		return errors.CreateValidationError(errs)
 	}
 
@@ -150,6 +140,16 @@ func RolePATCH(context *fiber.Ctx) error {
 
 	if role == nil {
 		return fiber.NewError(fiber.StatusNotFound, "role not found")
+	}
+
+	dataValidator := new(validators.UpdateRoleValidator)
+
+	if err := context.BodyParser(dataValidator); err != nil {
+		return err
+	}
+
+	if errs := validators.Instance.Validate(dataValidator); len(errs) > 0 {
+		return errors.CreateValidationError(errs)
 	}
 
 	if dataValidator.Name == nil && dataValidator.Permissions == nil {
@@ -253,7 +253,7 @@ func RolePATCH(context *fiber.Ctx) error {
 func RoleDELETE(context *fiber.Ctx) error {
 	paramValidator := new(validators.ParamValidator)
 
-	if err := context.BodyParser(paramValidator); err != nil {
+	if err := context.ParamsParser(paramValidator); err != nil {
 		return err
 	}
 
