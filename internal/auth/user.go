@@ -19,6 +19,7 @@ type User struct {
 	Enabled        bool       `json:"enabled" db:"enabled"`
 	EmailVerified  bool       `json:"email_verified" db:"email_verified"`
 	HashedPassword string     `json:"-" db:"hashed_password"`
+	Roles          []*Role    `json:"roles" db:"-"`
 }
 
 var UserQueryColumns = []string{
@@ -47,6 +48,62 @@ func GetUsers() ([]User, error) {
 		return nil, err
 	}
 
+	userIds := make([]string, len(output))
+
+	for _, user := range output {
+		userIds = append(userIds, user.Id)
+	}
+
+	rows := make([]map[string]interface{}, 0)
+	usersRolesQuery := sqlbuilder.Select(
+		"open_board_user_roles.user_id",
+		"open_board_role.id AS role_identifier",
+		"open_board_role.name AS role_name",
+		"open_board_role_permission.id AS permission_identifier",
+		"open_board_role_permission.path AS permission_path",
+	).From("open_board_user_roles")
+	usersRolesQuery.
+		Join("open_board_role", "open_board_user_roles.role_id = open_board_role.id").
+		JoinWithOption(sqlbuilder.LeftJoin, "open_board_role_permissions", "open_board_role.id = open_board_role_permissions.role_id").
+		JoinWithOption(sqlbuilder.LeftJoin, "open_board_role_permission", "open_board_role_permissions.permission_id = open_board_role_permission.id").
+		Where(usersRolesQuery.In("open_board_user_roles.user_id", userIds))
+
+	if err := db.Instance.Many(usersRolesQuery, &rows); err != nil {
+		return nil, err
+	}
+
+	roleMap := make(map[string]*Role)
+
+	for _, row := range rows {
+		roleId := row["role_identifier"].(string)
+
+		if _, ok := roleMap[roleId]; !ok {
+			roleMap[roleId] = &Role{
+				Id:          roleId,
+				DateCreated: row["role_date_created"].(time.Time),
+				Name:        row["role_name"].(string),
+			}
+		}
+
+		roleMap[roleId].Permissions = append(roleMap[roleId].Permissions, &RolePermission{
+			Id:          row["permission_identifier"].(string),
+			DateCreated: row["permission_date_created"].(time.Time),
+			Path:        row["permission_path"].(string),
+		})
+	}
+
+	for _, user := range output {
+		roles := make([]*Role, 0)
+
+		for _, row := range rows {
+			if row["user_id"].(string) == user.Id {
+				roles = append(roles, roleMap[row["role_identifier"].(string)])
+			}
+		}
+
+		user.Roles = roles
+	}
+
 	return output, nil
 }
 
@@ -62,6 +119,47 @@ func GetUser(id string) (*User, error) {
 	if err := db.Instance.One(userQuery, &output); err != nil {
 		return nil, err
 	}
-	
+
+	rows := make([]map[string]interface{}, 0)
+	usersRolesQuery := sqlbuilder.Select(
+		"open_board_role.id AS role_identifier",
+		"open_board_role.name AS role_name",
+		"open_board_role_permission.id AS permission_identifier",
+		"open_board_role_permission.path AS permission_path",
+	).From("open_board_user_roles")
+	usersRolesQuery.
+		Join("open_board_role", "open_board_user_roles.role_id = open_board_role.id").
+		JoinWithOption(sqlbuilder.LeftJoin, "open_board_role_permissions", "open_board_role.id = open_board_role_permissions.role_id").
+		JoinWithOption(sqlbuilder.LeftJoin, "open_board_role_permission", "open_board_role_permissions.permission_id = open_board_role_permission.id").
+		Where(usersRolesQuery.Equal("open_board_user_roles.user_id", output.Id))
+
+	if err := db.Instance.Many(usersRolesQuery, &rows); err != nil {
+		return nil, err
+	}
+
+	roleMap := make(map[string]*Role)
+
+	for _, row := range rows {
+		roleId := row["role_identifier"].(string)
+
+		if _, ok := roleMap[roleId]; !ok {
+			roleMap[roleId] = &Role{
+				Id:          roleId,
+				DateCreated: row["role_date_created"].(time.Time),
+				Name:        row["role_name"].(string),
+			}
+		}
+
+		roleMap[roleId].Permissions = append(roleMap[roleId].Permissions, &RolePermission{
+			Id:          row["permission_identifier"].(string),
+			DateCreated: row["permission_date_created"].(time.Time),
+			Path:        row["permission_path"].(string),
+		})
+	}
+
+	for _, role := range roleMap {
+		output.Roles = append(output.Roles, role)
+	}
+
 	return &output, nil
 }

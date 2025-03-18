@@ -27,3 +27,17 @@ type ResetPasswordValidator struct {
 	NewPassword     string `json:"new_password" validate:"required,min=8,max=32"`
 	ConfirmPassword string `json:"confirm_password" validate:"required,eqfield=NewPassword"`
 }
+
+type CreateRoleValidator struct {
+	Name        string   `json:"name" validate:"required,min=1,max=255"`
+	Permissions []string `json:"permissions" validate:"omitempty"`
+}
+
+type UpdateRoleValidator struct {
+	Name        *string   `json:"name,omitempty" validate:"omitempty,min=1,max=255"`
+	Permissions *[]string `json:"permissions,omitempty" validate:"omitempty"`
+}
+
+type CreatePermissionValidator struct {
+	Path string `json:"path" validate:"required,min=1,max=255"`
+}
