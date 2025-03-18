@@ -30,13 +30,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	defer func() {
-		err := db.Instance.Close()
-
-		if err != nil {
-			applogger.Logger.Fatal().Err(err).Msg("failed to close database instance")
-		}
-	}()
+	defer db.Instance.Close()
 
 	validators.InitializeValidatorInstance()
 

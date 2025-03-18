@@ -8,9 +8,9 @@ import (
 	"VEDA95/open_board/api/internal/http/validators"
 	"fmt"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofrs/uuid/v5"
 	"github.com/huandu/go-sqlbuilder"
 	"slices"
-	"time"
 )
 
 func RolesGET(context *fiber.Ctx) error {
@@ -38,44 +38,57 @@ func RolesPOST(context *fiber.Ctx) error {
 	insertRoleQuery := sqlbuilder.InsertInto("open_board_role").
 		Cols("name").
 		Values(dataValidator.Name).
-		Returning("id AS role_identifier", "date_created AS role_date_created", "name AS role_name")
+		Returning("id AS role_identifier", "name AS role_name")
 
 	if len(dataValidator.Permissions) > 0 {
+		transaction, err := db.Instance.Begin()
+
+		if err != nil {
+			return err
+		}
+
+		var role auth.Role
+
+		if err := transaction.One(insertRoleQuery, &role); err != nil {
+			return err
+		}
+
 		rows := make([]map[string]interface{}, 0)
 		rolesPermissionsQuery := sqlbuilder.InsertInto("open_board_role_permissions").Cols("role_id", "permission_id")
 
 		for _, permission := range dataValidator.Permissions {
-			rolesPermissionsQuery.Values("inserted_role.role_identifier", permission)
+			rolesPermissionsQuery.Values(role.Id, permission)
 		}
 
-		roleQuery := sqlbuilder.With(
-			sqlbuilder.CTETable("inserted_role", "role_identifier", "role_date_created", "role_name").As(insertRoleQuery),
-			sqlbuilder.CTEQuery("inserted_role_permissions").As(rolesPermissionsQuery),
-		)
+		roleQuery := sqlbuilder.Select(auth.RolePermissionsQueryColumns...).From("open_board_role_permissions")
 		roleQuery.
-			Select(auth.RolePermissionsQueryColumns...).
-			From("open_board_role_permissions").
-			Join("open_board_role", "open_board_role_permissions.role_id = open_board_role.id").
-			Join("open_board_role_permission", "open_board_role_permissions.permission_id = open_board_role_permission.id").
-			Where("open_board_role_permissions.role_id = inserted_role.role_identifier")
+			JoinWithOption(sqlbuilder.LeftJoin, "open_board_role", "open_board_role_permissions.role_id = open_board_role.id").
+			JoinWithOption(sqlbuilder.LeftJoin, "open_board_role_permission", "open_board_role_permissions.permission_id = open_board_role_permission.id").
+			Where(roleQuery.Equal("open_board_role_permissions.role_id", role.Id))
 
-		if err := db.Instance.Many(roleQuery, &rows); err != nil {
+		if err := transaction.Exec(rolesPermissionsQuery); err != nil {
+			return err
+		}
+
+		if err := transaction.Many(roleQuery, &rows); err != nil {
+			return err
+		}
+
+		if err := transaction.Commit(); err != nil {
 			return err
 		}
 
 		for _, row := range rows {
 			if len(output.Id) == 0 {
 				output = auth.Role{
-					Id:          row["role_identifier"].(string),
-					DateCreated: row["role_date_created"].(time.Time),
-					Name:        row["role_name"].(string),
+					Id:   row["role_identifier"].(uuid.UUID).String(),
+					Name: row["role_name"].(string),
 				}
 			}
 
 			output.Permissions = append(output.Permissions, &auth.RolePermission{
-				Id:          row["permission_identifier"].(string),
-				DateCreated: row["permission_date_created"].(time.Time),
-				Path:        row["permission_path"].(string),
+				Id:   row["permission_identifier"].(uuid.UUID).String(),
+				Path: row["permission_path"].(string),
 			})
 		}
 
@@ -164,7 +177,9 @@ func RolePATCH(context *fiber.Ctx) error {
 
 	if dataValidator.Name != nil && *dataValidator.Name != role.Name {
 		roleQuery := sqlbuilder.Update("open_board_role")
-		roleQuery.Set(roleQuery.Assign("name", dataValidator.Name))
+		roleQuery.
+			Where(roleQuery.Equal("open_board_role.id", role.Id)).
+			Set(roleQuery.Assign("name", dataValidator.Name))
 
 		if err := transaction.Exec(roleQuery); err != nil {
 			return err
@@ -174,8 +189,8 @@ func RolePATCH(context *fiber.Ctx) error {
 	}
 
 	if dataValidator.Permissions != nil {
-		permissionsToAdd := make([]string, len(role.Permissions))
-		permissionsToRemove := make([]string, len(role.Permissions))
+		permissionsToAdd := make([]interface{}, 0)
+		permissionsToRemove := make([]interface{}, 0)
 
 		for _, permission := range *dataValidator.Permissions {
 			match := slices.ContainsFunc(role.Permissions, func(rolePermission *auth.RolePermission) bool {
@@ -197,8 +212,6 @@ func RolePATCH(context *fiber.Ctx) error {
 			}
 		}
 
-		cteTables := make([]*sqlbuilder.CTEQueryBuilder, 2)
-
 		if len(permissionsToAdd) > 0 {
 			addPermissionQuery := sqlbuilder.InsertInto("open_board_role_permissions").Cols("role_id", "permission_id")
 
@@ -206,34 +219,34 @@ func RolePATCH(context *fiber.Ctx) error {
 				addPermissionQuery.Values(role.Id, permission)
 			}
 
-			cteTables = append(cteTables, sqlbuilder.CTEQuery("add_permissions").As(addPermissionQuery))
+			if err := transaction.Exec(addPermissionQuery); err != nil {
+				return err
+			}
 		}
 
 		if len(permissionsToRemove) > 0 {
 			removePermissionQuery := sqlbuilder.DeleteFrom("open_board_role_permissions")
-			removePermissionQuery.Where(removePermissionQuery.In("permission_id", permissionsToRemove))
-			cteTables = append(cteTables, sqlbuilder.CTEQuery("remove_permissions").As(removePermissionQuery))
-		}
+			removePermissionQuery.Where(removePermissionQuery.In("permission_id", permissionsToRemove...))
 
-		if len(cteTables) > 0 {
-			permissions := make([]*auth.RolePermission, 0)
-			permissionUpdateQuery := sqlbuilder.With(cteTables...)
-			permissionUpdateQuery.
-				Select(
-					"open_board_role_permission.id AS permission_identifier",
-					"open_board_role_permission.date_created AS permission_date_created",
-					"open_board_role_permission.path AS permission_path",
-				).
-				From("open_board_role_permissions").
-				Join("open_board_role_permission", "open_board_role_permissions.permission_id = permission_identifier").
-				Where(sqlbuilder.NewCond().Equal("open_board_role_permissions.role_id", role.Id))
-
-			if err := transaction.Many(permissionUpdateQuery, &permissions); err != nil {
+			if err := transaction.Exec(removePermissionQuery); err != nil {
 				return err
 			}
-
-			role.Permissions = permissions
 		}
+
+		permissions := make([]*auth.RolePermission, 0)
+		permissionsQuery := sqlbuilder.Select(
+			"open_board_role_permission.id AS permission_identifier",
+			"open_board_role_permission.path AS permission_path",
+		).From("open_board_role_permissions")
+		permissionsQuery.
+			Join("open_board_role_permission", "open_board_role_permissions.permission_id = open_board_role_permission.id").
+			Where(permissionsQuery.Equal("open_board_role_permissions.role_id", role.Id))
+
+		if err := transaction.Many(permissionsQuery, &permissions); err != nil {
+			return err
+		}
+
+		role.Permissions = permissions
 	}
 
 	if err := transaction.Commit(); err != nil {

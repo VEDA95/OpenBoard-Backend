@@ -2,37 +2,33 @@ package auth
 
 import (
 	"VEDA95/open_board/api/internal/db"
+	"VEDA95/open_board/api/internal/log"
 	"errors"
+	"github.com/gofrs/uuid/v5"
 	"github.com/huandu/go-sqlbuilder"
-	"time"
 )
 
 var RolePermissionsQueryColumns = []string{
 	"open_board_role.id AS role_identifier",
 	"open_board_role.name AS role_name",
-	"open_board_role.date_created AS role_date_created",
 	"open_board_role_permission.id AS permission_identifier",
 	"open_board_role_permission.path AS permission_path",
-	"open_board_role_permission.date_created AS permission_date_created",
 }
 
 type Role struct {
 	Id          string            `json:"id" db:"role_identifier"`
-	DateCreated time.Time         `json:"date_created" db:"role_date_created"`
 	Name        string            `json:"name" db:"role_name"`
 	Permissions []*RolePermission `json:"permissions" db:"permissions"`
 }
 
 type Permission struct {
-	Id          string    `json:"id" db:"id"`
-	DateCreated time.Time `json:"date_created" db:"date_created"`
-	Path        string    `json:"path" db:"path"`
+	Id   string `json:"id" db:"id"`
+	Path string `json:"path" db:"path"`
 }
 
 type RolePermission struct {
-	Id          string    `json:"id" db:"permission_identifier"`
-	DateCreated time.Time `json:"date_created" db:"permission_date_created"`
-	Path        string    `json:"path" db:"permission_path"`
+	Id   string `json:"id" db:"permission_identifier"`
+	Path string `json:"path" db:"permission_path"`
 }
 
 func GetRoles() ([]*Role, error) {
@@ -41,10 +37,10 @@ func GetRoles() ([]*Role, error) {
 	}
 
 	rows := make([]map[string]interface{}, 0)
-	rolesQuery := sqlbuilder.Select(RolePermissionsQueryColumns...).From("open_board_role_permissions")
+	rolesQuery := sqlbuilder.Select(RolePermissionsQueryColumns...).From("open_board_role")
 	rolesQuery.
-		Join("open_board_role", "open_board_role_permissions.role_id = open_board_role.id").
-		Join("open_board_role_permission", "open_board_role_permissions.permission_id = open_board_role_permission.id")
+		JoinWithOption(sqlbuilder.LeftJoin, "open_board_role_permissions", "open_board_role.id = open_board_role_permissions.role_id").
+		JoinWithOption(sqlbuilder.LeftJoin, "open_board_role_permission", "open_board_role_permissions.permission_id = open_board_role_permission.id")
 
 	if err := db.Instance.Many(rolesQuery, &rows); err != nil {
 		return nil, err
@@ -54,21 +50,22 @@ func GetRoles() ([]*Role, error) {
 	output := make([]*Role, 0)
 
 	for _, row := range rows {
-		roleId := row["role_identifier"].(string)
+		log.Logger.Debug().Interface("row", row).Msg("ROW DEBUG INFO:")
+		roleId := row["role_identifier"].(uuid.UUID).String()
 
 		if _, ok := roleMap[roleId]; !ok {
 			roleMap[roleId] = &Role{
-				Id:          roleId,
-				DateCreated: row["role_date_created"].(time.Time),
-				Name:        row["role_name"].(string),
+				Id:   roleId,
+				Name: row["role_name"].(string),
 			}
 		}
 
-		roleMap[roleId].Permissions = append(roleMap[roleId].Permissions, &RolePermission{
-			Id:          row["permission_identifier"].(string),
-			DateCreated: row["permission_date_created"].(time.Time),
-			Path:        row["permission_path"].(string),
-		})
+		if row["permission_identifier"] != nil {
+			roleMap[roleId].Permissions = append(roleMap[roleId].Permissions, &RolePermission{
+				Id:   row["permission_identifier"].(uuid.UUID).String(),
+				Path: row["permission_path"].(string),
+			})
+		}
 	}
 
 	for _, role := range roleMap {
@@ -99,17 +96,17 @@ func GetRole(id string) (*Role, error) {
 	for _, row := range rows {
 		if len(output.Id) == 0 {
 			output = Role{
-				Id:          row["role_identifier"].(string),
-				DateCreated: row["role_date_created"].(time.Time),
-				Name:        row["role_name"].(string),
+				Id:   row["role_identifier"].(uuid.UUID).String(),
+				Name: row["role_name"].(string),
 			}
 		}
 
-		output.Permissions = append(output.Permissions, &RolePermission{
-			Id:          row["permission_identifier"].(string),
-			DateCreated: row["permission_date_created"].(time.Time),
-			Path:        row["permission_path"].(string),
-		})
+		if row["permission_identifier"] != nil {
+			output.Permissions = append(output.Permissions, &RolePermission{
+				Id:   row["permission_identifier"].(uuid.UUID).String(),
+				Path: row["permission_path"].(string),
+			})
+		}
 	}
 
 	return &output, nil

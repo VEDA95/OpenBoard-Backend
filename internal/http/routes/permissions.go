@@ -35,7 +35,7 @@ func PermissionsPOST(context *fiber.Ctx) error {
 	var output auth.Permission
 	createPermissionQuery := sqlbuilder.
 		InsertInto("open_board_role_permission").
-		Cols("name").
+		Cols("path").
 		Values(dataValidator.Path).
 		Returning("*")
 

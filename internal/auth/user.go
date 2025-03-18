@@ -48,10 +48,10 @@ func GetUsers() ([]User, error) {
 		return nil, err
 	}
 
-	userIds := make([]string, len(output))
+	userIds := make([]interface{}, len(output))
 
-	for _, user := range output {
-		userIds = append(userIds, user.Id)
+	for index, user := range output {
+		userIds[index] = user.Id
 	}
 
 	rows := make([]map[string]interface{}, 0)
@@ -66,7 +66,7 @@ func GetUsers() ([]User, error) {
 		Join("open_board_role", "open_board_user_roles.role_id = open_board_role.id").
 		JoinWithOption(sqlbuilder.LeftJoin, "open_board_role_permissions", "open_board_role.id = open_board_role_permissions.role_id").
 		JoinWithOption(sqlbuilder.LeftJoin, "open_board_role_permission", "open_board_role_permissions.permission_id = open_board_role_permission.id").
-		Where(usersRolesQuery.In("open_board_user_roles.user_id", userIds))
+		Where(usersRolesQuery.In("open_board_user_roles.user_id", userIds...))
 
 	if err := db.Instance.Many(usersRolesQuery, &rows); err != nil {
 		return nil, err
@@ -79,16 +79,14 @@ func GetUsers() ([]User, error) {
 
 		if _, ok := roleMap[roleId]; !ok {
 			roleMap[roleId] = &Role{
-				Id:          roleId,
-				DateCreated: row["role_date_created"].(time.Time),
-				Name:        row["role_name"].(string),
+				Id:   roleId,
+				Name: row["role_name"].(string),
 			}
 		}
 
 		roleMap[roleId].Permissions = append(roleMap[roleId].Permissions, &RolePermission{
-			Id:          row["permission_identifier"].(string),
-			DateCreated: row["permission_date_created"].(time.Time),
-			Path:        row["permission_path"].(string),
+			Id:   row["permission_identifier"].(string),
+			Path: row["permission_path"].(string),
 		})
 	}
 
@@ -144,16 +142,14 @@ func GetUser(id string) (*User, error) {
 
 		if _, ok := roleMap[roleId]; !ok {
 			roleMap[roleId] = &Role{
-				Id:          roleId,
-				DateCreated: row["role_date_created"].(time.Time),
-				Name:        row["role_name"].(string),
+				Id:   roleId,
+				Name: row["role_name"].(string),
 			}
 		}
 
 		roleMap[roleId].Permissions = append(roleMap[roleId].Permissions, &RolePermission{
-			Id:          row["permission_identifier"].(string),
-			DateCreated: row["permission_date_created"].(time.Time),
-			Path:        row["permission_path"].(string),
+			Id:   row["permission_identifier"].(string),
+			Path: row["permission_path"].(string),
 		})
 	}
 
