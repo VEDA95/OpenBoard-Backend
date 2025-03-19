@@ -26,4 +26,4 @@ go.work.sum
 .vscode
 deployment/dev/data
 build/
-
+air.log
