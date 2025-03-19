@@ -6,7 +6,6 @@ import (
 	"VEDA95/open_board/api/internal/errors"
 	"VEDA95/open_board/api/internal/http/responses"
 	"VEDA95/open_board/api/internal/http/validators"
-	"VEDA95/open_board/api/internal/log"
 	"fmt"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofrs/uuid/v5"
@@ -217,8 +216,7 @@ func RolePATCH(context *fiber.Ctx) error {
 
 		if len(permissionsToAdd) > 0 {
 			addPermissionQuery := sqlbuilder.InsertInto("open_board_role_permissions").Cols("role_id", "permission_id")
-
-			log.Logger.Debug().Interface("role", role).Msg("ROLE DEBUG INFO")
+			
 			for _, permission := range permissionsToAdd {
 				addPermissionQuery.Values(role.Id, permission)
 			}

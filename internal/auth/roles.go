@@ -94,7 +94,6 @@ func GetRole(id string) (*Role, error) {
 	var output Role
 
 	for _, row := range rows {
-		log.Logger.Debug().Interface("row", row).Msg("ROW DEBUG INFO:")
 		if len(output.Id) == 0 {
 			output = Role{
 				Id:   row["role_identifier"].(uuid.UUID).String(),
