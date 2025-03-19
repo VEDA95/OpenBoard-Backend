@@ -6,6 +6,7 @@ import (
 	"VEDA95/open_board/api/internal/errors"
 	"VEDA95/open_board/api/internal/http/responses"
 	"VEDA95/open_board/api/internal/http/validators"
+	"VEDA95/open_board/api/internal/log"
 	"fmt"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofrs/uuid/v5"
@@ -40,7 +41,7 @@ func RolesPOST(context *fiber.Ctx) error {
 		Values(dataValidator.Name).
 		Returning("id AS role_identifier", "name AS role_name")
 
-	if len(dataValidator.Permissions) > 0 {
+	if dataValidator.Permissions != nil && len(*dataValidator.Permissions) > 0 {
 		transaction, err := db.Instance.Begin()
 
 		if err != nil {
@@ -56,7 +57,7 @@ func RolesPOST(context *fiber.Ctx) error {
 		rows := make([]map[string]interface{}, 0)
 		rolesPermissionsQuery := sqlbuilder.InsertInto("open_board_role_permissions").Cols("role_id", "permission_id")
 
-		for _, permission := range dataValidator.Permissions {
+		for _, permission := range *dataValidator.Permissions {
 			rolesPermissionsQuery.Values(role.Id, permission)
 		}
 
@@ -86,10 +87,12 @@ func RolesPOST(context *fiber.Ctx) error {
 				}
 			}
 
-			output.Permissions = append(output.Permissions, &auth.RolePermission{
-				Id:   row["permission_identifier"].(uuid.UUID).String(),
-				Path: row["permission_path"].(string),
-			})
+			if row["permission_identifier"] != nil {
+				output.Permissions = append(output.Permissions, &auth.RolePermission{
+					Id:   row["permission_identifier"].(uuid.UUID).String(),
+					Path: row["permission_path"].(string),
+				})
+			}
 		}
 
 	} else {
@@ -215,6 +218,7 @@ func RolePATCH(context *fiber.Ctx) error {
 		if len(permissionsToAdd) > 0 {
 			addPermissionQuery := sqlbuilder.InsertInto("open_board_role_permissions").Cols("role_id", "permission_id")
 
+			log.Logger.Debug().Interface("role", role).Msg("ROLE DEBUG INFO")
 			for _, permission := range permissionsToAdd {
 				addPermissionQuery.Values(role.Id, permission)
 			}

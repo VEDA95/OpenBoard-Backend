@@ -8,18 +8,20 @@ type LocalLoginValidator struct {
 }
 
 type CreateUserValidator struct {
-	Username  string  `json:"username" validate:"required,min=1"`
-	Email     string  `json:"email_address" validate:"required,email"`
-	Password  string  `json:"password" validate:"required,min=8,max=32"`
-	FirstName *string `json:"first_name,omitempty" validate:"omitempty,min=1"`
-	LastName  *string `json:"last_name,omitempty" validate:"omitempty,min=1"`
+	Username  string    `json:"username" validate:"required,min=1"`
+	Email     string    `json:"email_address" validate:"required,email"`
+	Password  string    `json:"password" validate:"required,min=8,max=32"`
+	FirstName *string   `json:"first_name,omitempty" validate:"omitempty,min=1"`
+	LastName  *string   `json:"last_name,omitempty" validate:"omitempty,min=1"`
+	Roles     *[]string `json:"roles,omitempty" validate:"omitempty,min=1"`
 }
 
 type UpdateUserValidator struct {
-	Username  *string `json:"username,omitempty" validate:"omitempty,min=1"`
-	Email     *string `json:"email_address,omitempty" validate:"omitempty,email"`
-	FirstName *string `json:"first_name,omitempty" validate:"omitempty,min=1"`
-	LastName  *string `json:"last_name,omitempty" validate:"omitempty,min=1"`
+	Username  *string   `json:"username,omitempty" validate:"omitempty,min=1"`
+	Email     *string   `json:"email_address,omitempty" validate:"omitempty,email"`
+	FirstName *string   `json:"first_name,omitempty" validate:"omitempty,min=1"`
+	LastName  *string   `json:"last_name,omitempty" validate:"omitempty,min=1"`
+	Roles     *[]string `json:"roles,omitempty" validate:"omitempty"`
 }
 
 type ResetPasswordValidator struct {
@@ -29,8 +31,8 @@ type ResetPasswordValidator struct {
 }
 
 type CreateRoleValidator struct {
-	Name        string   `json:"name" validate:"required,min=1,max=255"`
-	Permissions []string `json:"permissions" validate:"omitempty"`
+	Name        string    `json:"name" validate:"required,min=1,max=255"`
+	Permissions *[]string `json:"permissions,omitempty" validate:"omitempty"`
 }
 
 type UpdateRoleValidator struct {

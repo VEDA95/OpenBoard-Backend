@@ -81,11 +81,11 @@ func GetRole(id string) (*Role, error) {
 	}
 
 	rows := make([]map[string]interface{}, 0)
-	roleQuery := sqlbuilder.Select(RolePermissionsQueryColumns...).From("open_board_role_permissions")
+	roleQuery := sqlbuilder.Select(RolePermissionsQueryColumns...).From("open_board_role")
 	roleQuery.
-		Join("open_board_role", "open_board_role_permissions.role_id = open_board_role.id").
-		Join("open_board_role_permission", "open_board_role_permissions.permission_id = open_board_role_permission.id").
-		Where(roleQuery.Equal("open_board_role_permissions.role_id", id))
+		JoinWithOption(sqlbuilder.LeftJoin, "open_board_role_permissions", "open_board_role.id = open_board_role_permissions.role_id").
+		JoinWithOption(sqlbuilder.LeftJoin, "open_board_role_permission", "open_board_role_permissions.permission_id = open_board_role_permission.id").
+		Where(roleQuery.Equal("open_board_role.id", id))
 
 	if err := db.Instance.Many(roleQuery, &rows); err != nil {
 		return nil, err
@@ -94,6 +94,7 @@ func GetRole(id string) (*Role, error) {
 	var output Role
 
 	for _, row := range rows {
+		log.Logger.Debug().Interface("row", row).Msg("ROW DEBUG INFO:")
 		if len(output.Id) == 0 {
 			output = Role{
 				Id:   row["role_identifier"].(uuid.UUID).String(),

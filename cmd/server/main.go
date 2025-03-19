@@ -73,7 +73,7 @@ func main() {
 	authGroup.Get("/@me", middleware.CheckUserAuthentication, routes.UserInfoGET)
 	authGroup.Get("/roles", routes.RolesGET)
 	authGroup.Post("/roles", routes.RolesPOST)
-	authGroup.Get("/roles/:id", routes.RolesGET)
+	authGroup.Get("/roles/:id", routes.RoleGET)
 	authGroup.Patch("/roles/:id", routes.RolePATCH)
 	authGroup.Delete("/roles/:id", routes.RoleDELETE)
 	authGroup.Get("/permissions", routes.PermissionsGET)
