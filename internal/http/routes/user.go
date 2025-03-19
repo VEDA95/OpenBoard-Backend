@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"github.com/gofiber/fiber/v2"
 	"github.com/huandu/go-sqlbuilder"
+	"slices"
 	"time"
 )
 
@@ -61,8 +62,35 @@ func UsersPOST(context *fiber.Ctx) error {
 	var userId string
 	createUserQuery := sqlbuilder.InsertInto("open_board_user").Cols(queryColumns...).Values(queryValues...).Returning("id")
 
-	if err := db.Instance.One(createUserQuery, &userId); err != nil {
-		return err
+	if createValidator.Roles != nil && len(*createValidator.Roles) > 0 {
+		transaction, err := db.Instance.Begin()
+
+		if err != nil {
+			return err
+		}
+
+		if err := transaction.One(createUserQuery, &userId); err != nil {
+			return err
+		}
+
+		createUsersRolesQuery := sqlbuilder.InsertInto("open_board_user_roles").Cols("user_id", "role_id")
+
+		for _, role := range *createValidator.Roles {
+			createUserQuery.Values(userId, role)
+		}
+
+		if err := transaction.Exec(createUsersRolesQuery); err != nil {
+			return err
+		}
+
+		if err := transaction.Commit(); err != nil {
+			return err
+		}
+
+	} else {
+		if err := db.Instance.One(createUserQuery, &userId); err != nil {
+			return err
+		}
 	}
 
 	user, err := auth.GetUser(userId)
@@ -75,7 +103,7 @@ func UsersPOST(context *fiber.Ctx) error {
 		context,
 		fiber.StatusCreated,
 		responses.OKResponse(fiber.StatusCreated, fiber.Map{
-			"message": fmt.Sprintf("The user: %s has been successfully created!", user.Username),
+			"message": fmt.Sprintf("The user: %s has been successfully created", user.Username),
 			"user":    user,
 		}),
 	)
@@ -166,8 +194,68 @@ func UserPATCH(context *fiber.Ctx) error {
 		}
 	}
 
-	if err := db.Instance.Exec(updateUserQuery); err != nil {
-		return err
+	if updateUserValidator.Roles != nil {
+		transaction, err := db.Instance.Begin()
+
+		if err != nil {
+			return err
+		}
+
+		rolesToAdd := make([]interface{}, 0)
+		rolesToRemove := make([]interface{}, 0)
+
+		for _, role := range *updateUserValidator.Roles {
+			match := slices.ContainsFunc(user.Roles, func(userRole *auth.Role) bool {
+				return role == userRole.Id
+			})
+
+			if !match {
+				rolesToAdd = append(rolesToAdd, role)
+			}
+		}
+
+		for _, role := range user.Roles {
+			match := slices.ContainsFunc(*updateUserValidator.Roles, func(userRole string) bool {
+				return role.Id == userRole
+			})
+
+			if !match {
+				rolesToRemove = append(rolesToRemove, role)
+			}
+		}
+
+		if len(rolesToAdd) > 0 {
+			addRolesQuery := sqlbuilder.InsertInto("open_board_user_roles").Cols("user_id", "role_id")
+
+			for _, role := range rolesToAdd {
+				addRolesQuery.Values(user.Id, role)
+			}
+
+			if err := transaction.Exec(addRolesQuery); err != nil {
+				return err
+			}
+		}
+
+		if len(rolesToRemove) > 0 {
+			removeRolesQuery := sqlbuilder.DeleteFrom("open_board_user_roles")
+			removeRolesQuery.Where(removeRolesQuery.In("role_id", rolesToRemove...))
+
+			if err := transaction.Exec(removeRolesQuery); err != nil {
+				return err
+			}
+		}
+
+		if err := transaction.Exec(updateUserQuery); err != nil {
+			return err
+		}
+
+		if err := transaction.Commit(); err != nil {
+			return err
+		}
+	} else {
+		if err := db.Instance.Exec(updateUserQuery); err != nil {
+			return err
+		}
 	}
 
 	user, err = auth.GetUser(paramValidator.Id)
@@ -180,7 +268,7 @@ func UserPATCH(context *fiber.Ctx) error {
 		context,
 		fiber.StatusOK,
 		responses.OKResponse(fiber.StatusOK, fiber.Map{
-			"message": fmt.Sprintf("user: %s has been successfully updated!", user.Username),
+			"message": fmt.Sprintf("user: %s has been successfully updated", user.Username),
 			"user":    user,
 		}),
 	)
@@ -219,7 +307,7 @@ func UserDELETE(context *fiber.Ctx) error {
 		fiber.StatusOK,
 		responses.OKResponse(
 			fiber.StatusOK,
-			responses.GenericMessage{Message: fmt.Sprintf("user: %s has been successfully deleted!", user.Username)},
+			responses.GenericMessage{Message: fmt.Sprintf("user: %s has been successfully deleted", user.Username)},
 		),
 	)
 }

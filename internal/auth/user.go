@@ -2,7 +2,9 @@ package auth
 
 import (
 	"VEDA95/open_board/api/internal/db"
+	"VEDA95/open_board/api/internal/log"
 	"errors"
+	"github.com/gofrs/uuid/v5"
 	"github.com/huandu/go-sqlbuilder"
 	"time"
 )
@@ -75,7 +77,7 @@ func GetUsers() ([]User, error) {
 	roleMap := make(map[string]*Role)
 
 	for _, row := range rows {
-		roleId := row["role_identifier"].(string)
+		roleId := row["role_identifier"].(uuid.UUID).String()
 
 		if _, ok := roleMap[roleId]; !ok {
 			roleMap[roleId] = &Role{
@@ -84,22 +86,25 @@ func GetUsers() ([]User, error) {
 			}
 		}
 
-		roleMap[roleId].Permissions = append(roleMap[roleId].Permissions, &RolePermission{
-			Id:   row["permission_identifier"].(string),
-			Path: row["permission_path"].(string),
-		})
+		if row["permission_identifier"] != nil {
+			roleMap[roleId].Permissions = append(roleMap[roleId].Permissions, &RolePermission{
+				Id:   row["permission_identifier"].(uuid.UUID).String(),
+				Path: row["permission_path"].(string),
+			})
+		}
 	}
 
-	for _, user := range output {
+	for index, _ := range output {
 		roles := make([]*Role, 0)
 
 		for _, row := range rows {
-			if row["user_id"].(string) == user.Id {
-				roles = append(roles, roleMap[row["role_identifier"].(string)])
+			if row["user_id"].(uuid.UUID).String() == output[index].Id {
+				roles = append(roles, roleMap[row["role_identifier"].(uuid.UUID).String()])
 			}
 		}
 
-		user.Roles = roles
+		log.Logger.Debug().Interface("roles", roles).Msg("USER ROLE DEBUG INFO:")
+		output[index].Roles = roles
 	}
 
 	return output, nil
@@ -138,7 +143,7 @@ func GetUser(id string) (*User, error) {
 	roleMap := make(map[string]*Role)
 
 	for _, row := range rows {
-		roleId := row["role_identifier"].(string)
+		roleId := row["role_identifier"].(uuid.UUID).String()
 
 		if _, ok := roleMap[roleId]; !ok {
 			roleMap[roleId] = &Role{
@@ -147,10 +152,12 @@ func GetUser(id string) (*User, error) {
 			}
 		}
 
-		roleMap[roleId].Permissions = append(roleMap[roleId].Permissions, &RolePermission{
-			Id:   row["permission_identifier"].(string),
-			Path: row["permission_path"].(string),
-		})
+		if row["permission_identifier"] != nil {
+			roleMap[roleId].Permissions = append(roleMap[roleId].Permissions, &RolePermission{
+				Id:   row["permission_identifier"].(uuid.UUID).String(),
+				Path: row["permission_path"].(string),
+			})
+		}
 	}
 
 	for _, role := range roleMap {
