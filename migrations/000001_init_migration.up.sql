@@ -51,8 +51,8 @@ CREATE TABLE "open_board_user_roles" (
     PRIMARY KEY (user_id, role_id)
 );
 
-ALTER TABLE open_board_user_session ADD FOREIGN KEY (user_id) REFERENCES open_board_user (id);
-ALTER TABLE open_board_role_permissions ADD FOREIGN KEY (role_id) REFERENCES open_board_role (id);
-ALTER TABLE open_board_role_permissions ADD FOREIGN KEY (permission_id) REFERENCES open_board_role_permission (id);
-ALTER TABLE open_board_user_roles ADD FOREIGN KEY (user_id) REFERENCES open_board_user (id);
-ALTER TABLE open_board_user_roles ADD FOREIGN KEY (role_id) REFERENCES open_board_role (id);
+ALTER TABLE open_board_user_session ADD FOREIGN KEY (user_id) REFERENCES open_board_user (id) ON DELETE CASCADE ;
+ALTER TABLE open_board_role_permissions ADD FOREIGN KEY (role_id) REFERENCES open_board_role (id) ON DELETE CASCADE ;
+ALTER TABLE open_board_role_permissions ADD FOREIGN KEY (permission_id) REFERENCES open_board_role_permission (id) ON DELETE CASCADE;
+ALTER TABLE open_board_user_roles ADD FOREIGN KEY (user_id) REFERENCES open_board_user (id) ON DELETE CASCADE;
+ALTER TABLE open_board_user_roles ADD FOREIGN KEY (role_id) REFERENCES open_board_role (id) ON DELETE CASCADE;
