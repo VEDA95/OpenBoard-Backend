@@ -46,7 +46,7 @@ func LocalLogin(context *fiber.Ctx) error {
 		return errors.CreateValidationError(errs)
 	}
 
-	userQuery := sqlbuilder.Select(auth.UserQueryColumns...).From("open_board_user")
+	userQuery := auth.UsersQuery()
 	userQuery.Where(userQuery.Equal("username", dataValidator.Username))
 	user := new(auth.User)
 
@@ -144,6 +144,16 @@ func LocalLogin(context *fiber.Ctx) error {
 
 		return nil
 	}
+
+	rows := make([]map[string]interface{}, 0)
+	userRolesQuery := auth.UsersRolesQuery()
+	userRolesQuery.Where(userRolesQuery.Equal("open_board_user_roles.user_id", user.Id))
+
+	if err := db.Instance.Many(userRolesQuery, &rows); err != nil {
+		return err
+	}
+
+	auth.AppendRolesToUser(rows, user)
 
 	user.LastLogin = &now
 	responseMap := fiber.Map{
@@ -337,6 +347,16 @@ func LocalRefresh(context *fiber.Ctx) error {
 
 		return nil
 	}
+
+	rows := make([]map[string]interface{}, 0)
+	usersRolesQuery := auth.UsersRolesQuery()
+	usersRolesQuery.Where(usersRolesQuery.Equal("open_board_user_roles.user_id", session.User.Id))
+
+	if err := db.Instance.Many(usersRolesQuery, &rows); err != nil {
+		return err
+	}
+
+	auth.AppendRolesToUser(rows, session.User)
 
 	return responses.JSONResponse(
 		context,

@@ -76,7 +76,7 @@ func UsersPOST(context *fiber.Ctx) error {
 		createUsersRolesQuery := sqlbuilder.InsertInto("open_board_user_roles").Cols("user_id", "role_id")
 
 		for _, role := range *createValidator.Roles {
-			createUserQuery.Values(userId, role)
+			createUsersRolesQuery.Values(userId, role)
 		}
 
 		if err := transaction.Exec(createUsersRolesQuery); err != nil {

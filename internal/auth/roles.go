@@ -2,7 +2,6 @@ package auth
 
 import (
 	"VEDA95/open_board/api/internal/db"
-	"VEDA95/open_board/api/internal/log"
 	"errors"
 	"github.com/gofrs/uuid/v5"
 	"github.com/huandu/go-sqlbuilder"
@@ -37,40 +36,15 @@ func GetRoles() ([]*Role, error) {
 	}
 
 	rows := make([]map[string]interface{}, 0)
-	rolesQuery := sqlbuilder.Select(RolePermissionsQueryColumns...).From("open_board_role")
-	rolesQuery.
-		JoinWithOption(sqlbuilder.LeftJoin, "open_board_role_permissions", "open_board_role.id = open_board_role_permissions.role_id").
-		JoinWithOption(sqlbuilder.LeftJoin, "open_board_role_permission", "open_board_role_permissions.permission_id = open_board_role_permission.id")
+	rolesQuery := RolesQuery()
 
 	if err := db.Instance.Many(rolesQuery, &rows); err != nil {
 		return nil, err
 	}
 
-	roleMap := make(map[string]*Role)
 	output := make([]*Role, 0)
 
-	for _, row := range rows {
-		log.Logger.Debug().Interface("row", row).Msg("ROW DEBUG INFO:")
-		roleId := row["role_identifier"].(uuid.UUID).String()
-
-		if _, ok := roleMap[roleId]; !ok {
-			roleMap[roleId] = &Role{
-				Id:   roleId,
-				Name: row["role_name"].(string),
-			}
-		}
-
-		if row["permission_identifier"] != nil {
-			roleMap[roleId].Permissions = append(roleMap[roleId].Permissions, &RolePermission{
-				Id:   row["permission_identifier"].(uuid.UUID).String(),
-				Path: row["permission_path"].(string),
-			})
-		}
-	}
-
-	for _, role := range roleMap {
-		output = append(output, role)
-	}
+	AppendPermissionsToRoles(rows, &output)
 
 	return output, nil
 }
@@ -81,11 +55,8 @@ func GetRole(id string) (*Role, error) {
 	}
 
 	rows := make([]map[string]interface{}, 0)
-	roleQuery := sqlbuilder.Select(RolePermissionsQueryColumns...).From("open_board_role")
-	roleQuery.
-		JoinWithOption(sqlbuilder.LeftJoin, "open_board_role_permissions", "open_board_role.id = open_board_role_permissions.role_id").
-		JoinWithOption(sqlbuilder.LeftJoin, "open_board_role_permission", "open_board_role_permissions.permission_id = open_board_role_permission.id").
-		Where(roleQuery.Equal("open_board_role.id", id))
+	roleQuery := RolesQuery()
+	roleQuery.Where(roleQuery.Equal("open_board_role.id", id))
 
 	if err := db.Instance.Many(roleQuery, &rows); err != nil {
 		return nil, err
@@ -93,21 +64,7 @@ func GetRole(id string) (*Role, error) {
 
 	var output Role
 
-	for _, row := range rows {
-		if len(output.Id) == 0 {
-			output = Role{
-				Id:   row["role_identifier"].(uuid.UUID).String(),
-				Name: row["role_name"].(string),
-			}
-		}
-
-		if row["permission_identifier"] != nil {
-			output.Permissions = append(output.Permissions, &RolePermission{
-				Id:   row["permission_identifier"].(uuid.UUID).String(),
-				Path: row["permission_path"].(string),
-			})
-		}
-	}
+	AppendPermissionsToRole(rows, &output)
 
 	return &output, nil
 }
@@ -141,4 +98,53 @@ func GetPermission(id string) (*Permission, error) {
 	}
 
 	return &output, nil
+}
+
+func AppendPermissionsToRole(rows []map[string]interface{}, role *Role) {
+	for _, row := range rows {
+		if len(role.Id) == 0 {
+			role.Id = row["role_identifier"].(uuid.UUID).String()
+			role.Name = row["role_name"].(string)
+		}
+
+		if row["permission_identifier"] != nil {
+			role.Permissions = append(role.Permissions, &RolePermission{
+				Id:   row["permission_identifier"].(uuid.UUID).String(),
+				Path: row["permission_path"].(string),
+			})
+		}
+	}
+}
+
+func AppendPermissionsToRoles(rows []map[string]interface{}, roles *[]*Role) {
+	roleMap := make(map[string]*Role)
+
+	for _, row := range rows {
+		roleId := row["role_identifier"].(uuid.UUID).String()
+
+		if _, ok := roleMap[roleId]; !ok {
+			roleMap[roleId] = &Role{
+				Id:   roleId,
+				Name: row["role_name"].(string),
+			}
+		}
+
+		if row["permission_identifier"] != nil {
+			roleMap[roleId].Permissions = append(roleMap[roleId].Permissions, &RolePermission{
+				Id:   row["permission_identifier"].(uuid.UUID).String(),
+				Path: row["permission_path"].(string),
+			})
+		}
+	}
+
+	for _, role := range roleMap {
+		*roles = append(*roles, role)
+	}
+}
+
+func RolesQuery() *sqlbuilder.SelectBuilder {
+	return sqlbuilder.Select(RolePermissionsQueryColumns...).
+		From("open_board_role").
+		JoinWithOption(sqlbuilder.LeftJoin, "open_board_role_permissions", "open_board_role.id = open_board_role_permissions.role_id").
+		JoinWithOption(sqlbuilder.LeftJoin, "open_board_role_permission", "open_board_role_permissions.permission_id = open_board_role_permission.id")
 }

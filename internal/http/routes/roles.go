@@ -8,7 +8,6 @@ import (
 	"VEDA95/open_board/api/internal/http/validators"
 	"fmt"
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofrs/uuid/v5"
 	"github.com/huandu/go-sqlbuilder"
 	"slices"
 )
@@ -78,21 +77,7 @@ func RolesPOST(context *fiber.Ctx) error {
 			return err
 		}
 
-		for _, row := range rows {
-			if len(output.Id) == 0 {
-				output = auth.Role{
-					Id:   row["role_identifier"].(uuid.UUID).String(),
-					Name: row["role_name"].(string),
-				}
-			}
-
-			if row["permission_identifier"] != nil {
-				output.Permissions = append(output.Permissions, &auth.RolePermission{
-					Id:   row["permission_identifier"].(uuid.UUID).String(),
-					Path: row["permission_path"].(string),
-				})
-			}
-		}
+		auth.AppendPermissionsToRole(rows, &output)
 
 	} else {
 		roleQuery := insertRoleQuery
@@ -216,7 +201,7 @@ func RolePATCH(context *fiber.Ctx) error {
 
 		if len(permissionsToAdd) > 0 {
 			addPermissionQuery := sqlbuilder.InsertInto("open_board_role_permissions").Cols("role_id", "permission_id")
-			
+
 			for _, permission := range permissionsToAdd {
 				addPermissionQuery.Values(role.Id, permission)
 			}

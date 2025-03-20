@@ -71,6 +71,16 @@ func CheckUserAuthentication(context *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusUnauthorized, "unauthorized")
 	}
 
+	rows := make([]map[string]interface{}, 0)
+	usersRolesQuery := auth.UsersRolesQuery()
+	usersRolesQuery.Where(usersRolesQuery.Equal("open_board_user_roles.user_id", session.User.Id))
+
+	if err := db.Instance.Many(usersRolesQuery, &rows); err != nil {
+		return err
+	}
+
+	auth.AppendRolesToUser(rows, session.User)
+	
 	context.Locals("auth_session", session)
 
 	return context.Next()

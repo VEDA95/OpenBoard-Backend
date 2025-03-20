@@ -2,7 +2,6 @@ package auth
 
 import (
 	"VEDA95/open_board/api/internal/db"
-	"VEDA95/open_board/api/internal/log"
 	"errors"
 	"github.com/gofrs/uuid/v5"
 	"github.com/huandu/go-sqlbuilder"
@@ -38,13 +37,13 @@ var UserQueryColumns = []string{
 	"email_verified",
 }
 
-func GetUsers() ([]User, error) {
+func GetUsers() ([]*User, error) {
 	if db.Instance == nil {
 		return nil, errors.New("database not initialized")
 	}
 
-	output := make([]User, 0)
-	usersQuery := sqlbuilder.Select(UserQueryColumns...).From("open_board_user")
+	output := make([]*User, 0)
+	usersQuery := UsersQuery()
 
 	if err := db.Instance.Many(usersQuery, &output); err != nil {
 		return nil, err
@@ -74,6 +73,54 @@ func GetUsers() ([]User, error) {
 		return nil, err
 	}
 
+	AppendRolesToUsers(rows, &output)
+
+	return output, nil
+}
+
+func GetUser(id string) (*User, error) {
+	if db.Instance == nil {
+		return nil, errors.New("database not initialized")
+	}
+
+	var output User
+	userQuery := UsersQuery()
+	userQuery.Where(userQuery.Equal("id", id))
+
+	if err := db.Instance.One(userQuery, &output); err != nil {
+		return nil, err
+	}
+
+	rows := make([]map[string]interface{}, 0)
+	usersRolesQuery := UsersRolesQuery()
+	usersRolesQuery.Where(usersRolesQuery.Equal("open_board_user_roles.user_id", output.Id))
+
+	if err := db.Instance.Many(usersRolesQuery, &rows); err != nil {
+		return nil, err
+	}
+
+	AppendRolesToUser(rows, &output)
+
+	return &output, nil
+}
+
+func UsersQuery() *sqlbuilder.SelectBuilder {
+	return sqlbuilder.Select(UserQueryColumns...).From("open_board_user")
+}
+
+func UsersRolesQuery() *sqlbuilder.SelectBuilder {
+	return sqlbuilder.Select(
+		"open_board_role.id AS role_identifier",
+		"open_board_role.name AS role_name",
+		"open_board_role_permission.id AS permission_identifier",
+		"open_board_role_permission.path AS permission_path",
+	).From("open_board_user_roles").
+		Join("open_board_role", "open_board_user_roles.role_id = open_board_role.id").
+		JoinWithOption(sqlbuilder.LeftJoin, "open_board_role_permissions", "open_board_role.id = open_board_role_permissions.role_id").
+		JoinWithOption(sqlbuilder.LeftJoin, "open_board_role_permission", "open_board_role_permissions.permission_id = open_board_role_permission.id")
+}
+
+func AppendRolesToUsers(rows []map[string]interface{}, users *[]*User) {
 	roleMap := make(map[string]*Role)
 
 	for _, row := range rows {
@@ -94,52 +141,20 @@ func GetUsers() ([]User, error) {
 		}
 	}
 
-	for index, _ := range output {
+	for index := range *users {
 		roles := make([]*Role, 0)
 
 		for _, row := range rows {
-			if row["user_id"].(uuid.UUID).String() == output[index].Id {
+			if row["user_id"].(uuid.UUID).String() == (*users)[index].Id {
 				roles = append(roles, roleMap[row["role_identifier"].(uuid.UUID).String()])
 			}
 		}
 
-		log.Logger.Debug().Interface("roles", roles).Msg("USER ROLE DEBUG INFO:")
-		output[index].Roles = roles
+		(*users)[index].Roles = roles
 	}
-
-	return output, nil
 }
 
-func GetUser(id string) (*User, error) {
-	if db.Instance == nil {
-		return nil, errors.New("database not initialized")
-	}
-
-	var output User
-	userQuery := sqlbuilder.Select(UserQueryColumns...).From("open_board_user")
-	userQuery.Where(userQuery.Equal("id", id))
-
-	if err := db.Instance.One(userQuery, &output); err != nil {
-		return nil, err
-	}
-
-	rows := make([]map[string]interface{}, 0)
-	usersRolesQuery := sqlbuilder.Select(
-		"open_board_role.id AS role_identifier",
-		"open_board_role.name AS role_name",
-		"open_board_role_permission.id AS permission_identifier",
-		"open_board_role_permission.path AS permission_path",
-	).From("open_board_user_roles")
-	usersRolesQuery.
-		Join("open_board_role", "open_board_user_roles.role_id = open_board_role.id").
-		JoinWithOption(sqlbuilder.LeftJoin, "open_board_role_permissions", "open_board_role.id = open_board_role_permissions.role_id").
-		JoinWithOption(sqlbuilder.LeftJoin, "open_board_role_permission", "open_board_role_permissions.permission_id = open_board_role_permission.id").
-		Where(usersRolesQuery.Equal("open_board_user_roles.user_id", output.Id))
-
-	if err := db.Instance.Many(usersRolesQuery, &rows); err != nil {
-		return nil, err
-	}
-
+func AppendRolesToUser(rows []map[string]interface{}, user *User) {
 	roleMap := make(map[string]*Role)
 
 	for _, row := range rows {
@@ -161,8 +176,6 @@ func GetUser(id string) (*User, error) {
 	}
 
 	for _, role := range roleMap {
-		output.Roles = append(output.Roles, role)
+		user.Roles = append(user.Roles, role)
 	}
-
-	return &output, nil
 }
