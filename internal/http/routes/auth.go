@@ -127,7 +127,7 @@ func LocalLogin(context *fiber.Ctx) error {
 			HTTPOnly: true,
 			Secure:   false,
 			Path:     "/",
-			Domain:   "localhost:8080",
+			Domain:   "localhost",
 		})
 
 		if dataValidator.Remember {
@@ -138,7 +138,7 @@ func LocalLogin(context *fiber.Ctx) error {
 				HTTPOnly: true,
 				Secure:   false,
 				Path:     "/",
-				Domain:   "localhost:8080",
+				Domain:   "localhost",
 			})
 		}
 
@@ -333,7 +333,7 @@ func LocalRefresh(context *fiber.Ctx) error {
 			HTTPOnly: true,
 			Secure:   false,
 			Path:     "/",
-			Domain:   "localhost:8080",
+			Domain:   "localhost",
 		})
 		context.Cookie(&fiber.Cookie{
 			Name:     "open_board_session_remember_me",
@@ -342,7 +342,7 @@ func LocalRefresh(context *fiber.Ctx) error {
 			HTTPOnly: true,
 			Secure:   false,
 			Path:     "/",
-			Domain:   "localhost:8080",
+			Domain:   "localhost",
 		})
 
 		return nil
