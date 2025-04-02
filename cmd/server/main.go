@@ -71,6 +71,7 @@ func main() {
 	authGroup.Post("/refresh", routes.LocalRefresh)
 	authGroup.Post("/logout", middleware.CheckUserAuthentication, routes.LocalLogout)
 	authGroup.Get("/@me", middleware.CheckUserAuthentication, routes.UserInfoGET)
+	authGroup.Get("@me/sessions", middleware.CheckUserAuthentication, routes.UserSessionsGET)
 	authGroup.Get("/roles", routes.RolesGET)
 	authGroup.Post("/roles", routes.RolesPOST)
 	authGroup.Get("/roles/:id", routes.RoleGET)

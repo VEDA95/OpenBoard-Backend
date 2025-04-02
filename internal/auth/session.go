@@ -20,6 +20,14 @@ type UserSession struct {
 	AdditionalInfo   map[string]interface{} `db:"session_additional_info"`
 }
 
+type UserSessionReadOnly struct {
+	Id          string     `json:"id" db:"id"`
+	DateCreated time.Time  `json:"date_created" db:"date_created"`
+	DateUpdated *time.Time `json:"date_updated" db:"date_updated,omitempty"`
+	UserAgent   string     `json:"user_agent" db:"user_agent"`
+	IPAddress   string     `json:"ip_address" db:"ip_address"`
+}
+
 var SessionQueryColumns = []string{
 	"open_board_user_session.id AS session_id",
 	"open_board_user_session.date_created AS session_date_created",

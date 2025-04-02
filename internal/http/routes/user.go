@@ -19,6 +19,19 @@ func UserInfoGET(context *fiber.Ctx) error {
 	return responses.JSONResponse(context, fiber.StatusOK, responses.OKResponse(fiber.StatusOK, session.User))
 }
 
+func UserSessionsGET(context *fiber.Ctx) error {
+	session := context.Locals("auth_session").(auth.UserSession)
+	userSessions := make([]auth.UserSessionReadOnly, 0)
+	userSessionQuery := sqlbuilder.Select("id", "date_created", "date_updated", "user_agent", "ip_address").From("open_board_user_session")
+	userSessionQuery.Where(userSessionQuery.Equal("user_id", session.User.Id))
+
+	if err := db.Instance.Many(userSessionQuery, &userSessions); err != nil {
+		return err
+	}
+
+	return responses.JSONResponse(context, fiber.StatusOK, responses.OKCollectionResponse(fiber.StatusOK, userSessions))
+}
+
 func UsersGET(context *fiber.Ctx) error {
 	users, err := auth.GetUsers()
 
