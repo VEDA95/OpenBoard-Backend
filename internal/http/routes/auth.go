@@ -176,25 +176,47 @@ func LocalLogin(context *fiber.Ctx) error {
 }
 
 func LocalLogout(context *fiber.Ctx) error {
-	returnValidator := new(validators.ReturnValidator)
+	paramValidator := new(validators.LocalLogoutIdValidator)
 
-	if err := context.BodyParser(returnValidator); err != nil {
+	if err := context.ParamsParser(paramValidator); err != nil {
 		return err
 	}
 
-	if errs := validators.Instance.Validate(returnValidator); len(errs) > 0 {
+	if errs := validators.Instance.Validate(paramValidator); len(errs) > 0 {
+		return errors.CreateValidationError(errs)
+	}
+
+	logoutValidator := new(validators.LocalLogoutBodyValidator)
+
+	if err := context.BodyParser(logoutValidator); err != nil {
+		return err
+	}
+
+	if errs := validators.Instance.Validate(logoutValidator); len(errs) > 0 {
 		return errors.CreateValidationError(errs)
 	}
 
 	session := context.Locals("auth_session").(auth.UserSession)
 	deleteSessionQuery := sqlbuilder.DeleteFrom("open_board_user_session")
-	deleteSessionQuery.Where(deleteSessionQuery.Equal("id", session.Id))
+
+	if logoutValidator.All {
+		deleteSessionQuery.Where(deleteSessionQuery.Equal("user_id", session.User.Id))
+
+	} else if paramValidator.Id != nil {
+		deleteSessionQuery.Where(
+			deleteSessionQuery.Equal("id", paramValidator.Id),
+			deleteSessionQuery.Equal("user_id", session.User.Id),
+		)
+
+	} else {
+		deleteSessionQuery.Where(deleteSessionQuery.Equal("id", session.Id))
+	}
 
 	if err := db.Instance.Exec(deleteSessionQuery); err != nil {
 		return err
 	}
 
-	if returnValidator.ReturnType == "session" {
+	if logoutValidator.ReturnType == "session" {
 		context.Status(fiber.StatusOK)
 		context.ClearCookie("open_board_session")
 
