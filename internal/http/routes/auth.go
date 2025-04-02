@@ -6,6 +6,7 @@ import (
 	"VEDA95/open_board/api/internal/errors"
 	"VEDA95/open_board/api/internal/http/responses"
 	"VEDA95/open_board/api/internal/http/validators"
+	"VEDA95/open_board/api/internal/log"
 	genericError "errors"
 	"fmt"
 	"github.com/gofiber/fiber/v2"
@@ -176,16 +177,6 @@ func LocalLogin(context *fiber.Ctx) error {
 }
 
 func LocalLogout(context *fiber.Ctx) error {
-	paramValidator := new(validators.LocalLogoutIdValidator)
-
-	if err := context.ParamsParser(paramValidator); err != nil {
-		return err
-	}
-
-	if errs := validators.Instance.Validate(paramValidator); len(errs) > 0 {
-		return errors.CreateValidationError(errs)
-	}
-
 	logoutValidator := new(validators.LocalLogoutBodyValidator)
 
 	if err := context.BodyParser(logoutValidator); err != nil {
@@ -196,17 +187,13 @@ func LocalLogout(context *fiber.Ctx) error {
 		return errors.CreateValidationError(errs)
 	}
 
+	log.Logger.Debug().Interface("body", logoutValidator).Msg("LocalLogout")
+
 	session := context.Locals("auth_session").(auth.UserSession)
 	deleteSessionQuery := sqlbuilder.DeleteFrom("open_board_user_session")
 
 	if logoutValidator.All {
 		deleteSessionQuery.Where(deleteSessionQuery.Equal("user_id", session.User.Id))
-
-	} else if paramValidator.Id != nil {
-		deleteSessionQuery.Where(
-			deleteSessionQuery.Equal("id", paramValidator.Id),
-			deleteSessionQuery.Equal("user_id", session.User.Id),
-		)
 
 	} else {
 		deleteSessionQuery.Where(deleteSessionQuery.Equal("id", session.Id))
@@ -216,7 +203,61 @@ func LocalLogout(context *fiber.Ctx) error {
 		return err
 	}
 
-	if logoutValidator.ReturnType == "session" {
+	if !logoutValidator.All && logoutValidator.ReturnType == "session" {
+		context.Status(fiber.StatusOK)
+		context.ClearCookie("open_board_session")
+
+		if session.RefreshToken != nil && len(*session.RefreshToken) > 0 {
+			context.ClearCookie("open_board_session_remember_me")
+		}
+
+		return nil
+	}
+
+	return responses.JSONResponse(
+		context,
+		fiber.StatusOK,
+		responses.OKResponse(
+			fiber.StatusOK,
+			responses.GenericMessage{Message: fmt.Sprintf("%s logged out successfully", session.User.Username)}),
+	)
+}
+
+func LocalLogoutById(context *fiber.Ctx) error {
+	paramValidator := new(validators.ParamValidator)
+
+	if err := context.ParamsParser(paramValidator); err != nil {
+		return err
+	}
+
+	if errs := validators.Instance.Validate(paramValidator); len(errs) > 0 {
+		return errors.CreateValidationError(errs)
+	}
+
+	logoutValidator := new(validators.ReturnValidator)
+
+	if err := context.BodyParser(logoutValidator); err != nil {
+		return err
+	}
+
+	if errs := validators.Instance.Validate(logoutValidator); len(errs) > 0 {
+		return errors.CreateValidationError(errs)
+	}
+
+	log.Logger.Debug().Interface("body", logoutValidator).Msg("LocalLogout")
+
+	session := context.Locals("auth_session").(auth.UserSession)
+	deleteSessionQuery := sqlbuilder.DeleteFrom("open_board_user_session")
+	deleteSessionQuery.Where(
+		deleteSessionQuery.Equal("id", paramValidator.Id),
+		deleteSessionQuery.Equal("user_id", session.User.Id),
+	)
+
+	if err := db.Instance.Exec(deleteSessionQuery); err != nil {
+		return err
+	}
+
+	if (paramValidator.Id == session.Id) && logoutValidator.ReturnType == "session" {
 		context.Status(fiber.StatusOK)
 		context.ClearCookie("open_board_session")
 

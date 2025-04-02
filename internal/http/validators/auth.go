@@ -48,11 +48,7 @@ type UpdatePermissionValidator struct {
 	Path *string `json:"path,omitempty" validate:"omitempty,min=1,max=255"`
 }
 
-type LocalLogoutIdValidator struct {
-	Id *string `json:"id" validate:"omitempty,uuid"`
-}
-
 type LocalLogoutBodyValidator struct {
 	ReturnType string `json:"type" validate:"required,oneof=token session"`
-	All        bool   `json:"all" validate:"omitempty,boolean" default:"false"`
+	All        bool   `json:"all" validate:"omitempty" default:"false"`
 }
