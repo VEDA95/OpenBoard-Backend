@@ -196,7 +196,7 @@ func LocalLogin(context *fiber.Ctx) error {
 //		@Summary		logs out user
 //	 	@Tags			auth
 //		@Param 			request body validators.LocalLogoutBodyValidator false "Request Data"
-//		@Success		200	{object} responses.OkResponse[auth.LocalUserLogin]
+//		@Success		200	{object} responses.OkResponse[responses.GenericMessage]
 //		@Failure		422 {object} responses.ErrorResponse[validators.ErrorResponseMap]
 //		@Failure		500 {object} responses.ErrorResponse[responses.GenericMessage]
 //		@Router			/auth/logout [post]
@@ -256,7 +256,7 @@ func LocalLogout(context *fiber.Ctx) error {
 //	 	@Tags			auth
 //		@Param			id path string true "Session ID"
 //		@Param 			request body validators.ReturnValidator false "Request Data"
-//		@Success		200	{object} responses.OkResponse[auth.LocalUserLogin]
+//		@Success		200	{object} responses.OkResponse[responses.GenericMessage]
 //		@Failure		422 {object} responses.ErrorResponse[validators.ErrorResponseMap]
 //		@Failure		500 {object} responses.ErrorResponse[responses.GenericMessage]
 //		@Router			/auth/logout/{id} [post]
@@ -477,13 +477,13 @@ func LocalRefresh(context *fiber.Ctx) error {
 	return responses.JSONResponse(
 		context,
 		fiber.StatusOK,
-		responses.OKResponse(fiber.StatusOK, fiber.Map{
-			"message":            fmt.Sprintf("%s auth session has been successfully refreshed", session.User.Username),
-			"user":               session.User,
-			"access_token":       accessToken,
-			"refresh_token":      refreshToken,
-			"expires_in":         expiresIn,
-			"refresh_expires_in": refreshExpiresOn,
+		responses.OKResponse(fiber.StatusOK, auth.LocalUserLogin{
+			Message:          fmt.Sprintf("%s auth session has been successfully refreshed", session.User.Username),
+			User:             session.User,
+			AccessToken:      accessToken,
+			RefreshToken:     &refreshToken,
+			ExpiresIn:        expiresIn,
+			RefreshExpiresIn: &refreshExpiresIn,
 		}),
 	)
 }

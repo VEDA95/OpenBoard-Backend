@@ -105,7 +105,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/VEDA95_open_board_api_internal_http_responses.OkResponse-VEDA95_open_board_api_internal_auth_LocalUserLogin"
+                            "$ref": "#/definitions/VEDA95_open_board_api_internal_http_responses.OkResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage"
                         }
                     },
                     "422": {
@@ -157,7 +157,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/VEDA95_open_board_api_internal_http_responses.OkResponse-VEDA95_open_board_api_internal_auth_LocalUserLogin"
+                            "$ref": "#/definitions/VEDA95_open_board_api_internal_http_responses.OkResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage"
                         }
                     },
                     "422": {
@@ -368,6 +368,17 @@ const docTemplate = `{
                 },
                 "data": {
                     "$ref": "#/definitions/VEDA95_open_board_api_internal_auth.LocalUserLogin"
+                }
+            }
+        },
+        "VEDA95_open_board_api_internal_http_responses.OkResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "data": {
+                    "$ref": "#/definitions/VEDA95_open_board_api_internal_http_responses.GenericMessage"
                 }
             }
         },
