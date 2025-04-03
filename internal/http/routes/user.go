@@ -13,12 +13,33 @@ import (
 	"time"
 )
 
+// UserInfoGET godoc
+//
+//	@Description 	Retrieve own user details. IMPORTANT: The actual endpoint is '/auth/@me' (with @ symbol)
+//	@Summary 		Retrieve user details
+//	@Tags			authentication
+//	@Success		200 {object} responses.OkResponse[auth.User]
+//	@Failure		401,500 {object} responses.ErrorResponse[responses.GenericMessage]
+//	@Router			/auth/me [get]
+//	@Produce		json
 func UserInfoGET(context *fiber.Ctx) error {
 	session := context.Locals("auth_session").(auth.UserSession)
 
 	return responses.JSONResponse(context, fiber.StatusOK, responses.OKResponse(fiber.StatusOK, session.User))
 }
 
+// UserInfoPATCH godoc
+//
+//	@Description 	Update own user details. IMPORTANT: The actual endpoint is '/auth/@me' (with @ symbol)
+//	@Summary 		Update user details
+//	@Tags			authentication
+//	@Param			request body validators.UpdateUserValidator false "request Data"
+//	@Success		200 {object} responses.SuccessResponse[auth.User]
+//	@Failure		422 {object} responses.ErrorResponse[validators.ErrorResponseMap]
+//	@Failure		401,500 {object} responses.ErrorResponse[responses.GenericMessage]
+//	@Router			/auth/me [patch]
+//	@Accept			json
+//	@Produce		json
 func UserInfoPATCH(context *fiber.Ctx) error {
 	updateUserValidator := new(validators.UpdateUserValidator)
 
@@ -141,6 +162,15 @@ func UserInfoPATCH(context *fiber.Ctx) error {
 
 }
 
+// UserInfoDELETE godoc
+//
+//	@Description 	Delete own user account. IMPORTANT: The actual endpoint is '/auth/@me' (with @ symbol)
+//	@Summary 		Delete user account
+//	@Tags			authentication
+//	@Success		200 {object} responses.OkResponse[responses.GenericMessage]
+//	@Failure		401,500 {object} responses.ErrorResponse[responses.GenericMessage]
+//	@Router			/auth/me [delete]
+//	@Produce		json
 func UserInfoDELETE(context *fiber.Ctx) error {
 	session := context.Locals("auth_session").(auth.UserSession)
 	deleteUserQuery := sqlbuilder.DeleteFrom("open_board_user")
@@ -160,6 +190,15 @@ func UserInfoDELETE(context *fiber.Ctx) error {
 	)
 }
 
+// UserSessionsGET godoc
+//
+//	@Description 	List own active auth sessions. IMPORTANT: The actual endpoint is '/auth/@me/sessions' (with @ symbol)
+//	@Summary 		List sessions
+//	@Tags			authentication
+//	@Success		200 {object} responses.OkCollectionResponse[auth.UserSessionReadOnly]
+//	@Failure		401,500 {object} responses.ErrorResponse[responses.GenericMessage]
+//	@Router			/auth/me/sessions [get]
+//	@Produce		json
 func UserSessionsGET(context *fiber.Ctx) error {
 	session := context.Locals("auth_session").(auth.UserSession)
 	userSessions := make([]auth.UserSessionReadOnly, 0)
@@ -173,6 +212,15 @@ func UserSessionsGET(context *fiber.Ctx) error {
 	return responses.JSONResponse(context, fiber.StatusOK, responses.OKCollectionResponse(fiber.StatusOK, userSessions))
 }
 
+// UsersGET godoc
+//
+//	@Description 	List all users
+//	@Summary 		List users
+//	@Tags			users
+//	@Success		200 {object} responses.OkCollectionResponse[auth.User]
+//	@Failure		500 {object} responses.ErrorResponse[responses.GenericMessage]
+//	@Router			/api/users [get]
+//	@Produce		json
 func UsersGET(context *fiber.Ctx) error {
 	users, err := auth.GetUsers()
 
@@ -183,6 +231,18 @@ func UsersGET(context *fiber.Ctx) error {
 	return responses.JSONResponse(context, fiber.StatusOK, responses.OKCollectionResponse(fiber.StatusOK, users))
 }
 
+// UsersPOST godoc
+//
+//	@Description 	Create user
+//	@Summary 		Create user
+//	@Tags			users
+//	@Param			request body validators.CreateUserValidator false "request data"
+//	@Success		201 {object} responses.SuccessResponse[auth.User]
+//	@Failure		422 {object} responses.ErrorResponse[validators.ErrorResponseMap]
+//	@Failure		500 {object} responses.ErrorResponse[responses.GenericMessage]
+//	@Router			/api/users [post]
+//	@Accept			json
+//	@Produce		json
 func UsersPOST(context *fiber.Ctx) error {
 	createValidator := new(validators.CreateUserValidator)
 
@@ -263,6 +323,17 @@ func UsersPOST(context *fiber.Ctx) error {
 	)
 }
 
+// UserGET godoc
+//
+//	@Description 	List user by ID
+//	@Summary 		List user
+//	@Tags			users
+//	@Param			id path string true "user ID"
+//	@Success		200 {object} responses.OkResponse[auth.User]
+//	@Failure		422 {object} responses.ErrorResponse[validators.ErrorResponseMap]
+//	@Failure		404,500 {object} responses.ErrorResponse[responses.GenericMessage]
+//	@Router			/api/users/{id} [get]
+//	@Produce		json
 func UserGET(context *fiber.Ctx) error {
 	paramValidator := new(validators.ParamValidator)
 
@@ -287,6 +358,19 @@ func UserGET(context *fiber.Ctx) error {
 	return responses.JSONResponse(context, fiber.StatusOK, responses.OKResponse(fiber.StatusOK, user))
 }
 
+// UserPATCH godoc
+//
+//	@Description 	Update user by ID
+//	@Summary 		Update user
+//	@Tags			users
+//	@Param			id path string true "user ID"
+//	@Param			request body responses.SuccessResponse[auth.User] false "request data"
+//	@Success		200 {object} responses.OkCollectionResponse[auth.User]
+//	@Failure		422 {object} responses.ErrorResponse[validators.ErrorResponseMap]
+//	@Failure		404,500 {object} responses.ErrorResponse[responses.GenericMessage]
+//	@Router			/api/users/{id} [patch]
+//	@Accept			json
+//	@Produce		json
 func UserPATCH(context *fiber.Ctx) error {
 	paramValidator := new(validators.ParamValidator)
 
@@ -428,6 +512,17 @@ func UserPATCH(context *fiber.Ctx) error {
 	)
 }
 
+// UserDELETE godoc
+//
+//	@Description 	Delete user by ID
+//	@Summary 		Delete user
+//	@Tags			users
+//	@Param			id path string true "user ID"
+//	@Success		200 {object} responses.OkCollectionResponse[auth.User]
+//	@Failure		422 {object} responses.ErrorResponse[validators.ErrorResponseMap]
+//	@Failure		404,500 {object} responses.ErrorResponse[responses.GenericMessage]
+//	@Router			/api/users/{id} [delete]
+//	@Produce		json
 func UserDELETE(context *fiber.Ctx) error {
 	paramValidator := new(validators.ParamValidator)
 

@@ -11,6 +11,15 @@ import (
 	"github.com/huandu/go-sqlbuilder"
 )
 
+// PermissionsGET godoc
+//
+//	@Description 	List all permissions
+//	@Summary 		List permissions
+//	@Tags			authorization
+//	@Success		200 {object} responses.OkCollectionResponse[auth.Permission]
+//	@Failure		500 {object} responses.ErrorResponse[responses.GenericMessage]
+//	@Router			/api/permissions [get]
+//	@Produce		json
 func PermissionsGET(context *fiber.Ctx) error {
 	permissions, err := auth.GetPermissions()
 
@@ -21,6 +30,18 @@ func PermissionsGET(context *fiber.Ctx) error {
 	return responses.JSONResponse(context, fiber.StatusOK, responses.OKCollectionResponse(fiber.StatusOK, permissions))
 }
 
+// PermissionsPOST godoc
+//
+//	@Description 	Create permission
+//	@Summary 		Create permission
+//	@Tags			authorization
+//	@Param			request body validators.CreatePermissionValidator false "Request Data"
+//	@Success		201 {object} responses.SuccessResponse[auth.Permission]
+//	@Failure		422 {object} responses.ErrorResponse[validators.ErrorResponseMap]
+//	@Failure		500 {object} responses.ErrorResponse[responses.GenericMessage]
+//	@Router			/api/permissions [post]
+//	@Accept			json
+//	@Produce		json
 func PermissionsPOST(context *fiber.Ctx) error {
 	dataValidator := new(validators.CreatePermissionValidator)
 
@@ -46,13 +67,21 @@ func PermissionsPOST(context *fiber.Ctx) error {
 	return responses.JSONResponse(
 		context,
 		fiber.StatusOK,
-		responses.OKResponse(fiber.StatusOK, fiber.Map{
-			"message":    fmt.Sprintf("permission: %s was created suucessfully", output.Id),
-			"permission": output,
-		}),
+		responses.CreateSuccessResponse(fiber.StatusOK, fmt.Sprintf("permission: %s was created suucessfully", output.Id), output),
 	)
 }
 
+// PermissionGET godoc
+//
+//	@Description 	List permission by ID
+//	@Summary 		List permission
+//	@Tags			authorization
+//	@Param			id path string true "Permission ID"
+//	@Success		200 {object} responses.OkResponse[auth.Permission]
+//	@Failure		422 {object} responses.ErrorResponse[validators.ErrorResponseMap]
+//	@Failure		404,500 {object} responses.ErrorResponse[responses.GenericMessage]
+//	@Router			/api/permissions/{id} [get]
+//	@Produce		json
 func PermissionGET(context *fiber.Ctx) error {
 	paramValidator := new(validators.ParamValidator)
 
@@ -73,6 +102,19 @@ func PermissionGET(context *fiber.Ctx) error {
 	return responses.JSONResponse(context, fiber.StatusOK, responses.OKResponse(fiber.StatusOK, permission))
 }
 
+// PermissionPATCH godoc
+//
+//	@Description 	Update permission by ID
+//	@Summary 		Update permission
+//	@Tags			authorization
+//	@Param			id path string true "Permission ID"
+//	@Param			request body validators.UpdatePermissionValidator false "Request Data"
+//	@Success		200 {object} responses.SuccessResponse[auth.Permission]
+//	@Failure		422 {object} responses.ErrorResponse[validators.ErrorResponseMap]
+//	@Failure		404,500 {object} responses.ErrorResponse[responses.GenericMessage]
+//	@Router			/api/permissions/{id} [patch]
+//	@Accept			json
+//	@Produce		json
 func PermissionPATCH(context *fiber.Ctx) error {
 	paramValidator := new(validators.ParamValidator)
 
@@ -124,13 +166,25 @@ func PermissionPATCH(context *fiber.Ctx) error {
 	return responses.JSONResponse(
 		context,
 		fiber.StatusOK,
-		responses.OKResponse(fiber.StatusOK, fiber.Map{
-			"message":    fmt.Sprintf("permission: %s was updated sucessfully", updatedPermission.Id),
-			"permission": updatedPermission,
-		}),
+		responses.CreateSuccessResponse(
+			fiber.StatusOK,
+			fmt.Sprintf("permission: %s was updated sucessfully", updatedPermission.Id),
+			updatedPermission,
+		),
 	)
 }
 
+// PermissionDELETE godoc
+//
+//	@Description 	Delete permission by ID
+//	@Summary 		Delete permission
+//	@Tags			authorization
+//	@Param			id path string true "Permission ID"
+//	@Success		200 {object} responses.OkResponse[responses.GenericMessage]
+//	@Failure		422 {object} responses.ErrorResponse[validators.ErrorResponseMap]
+//	@Failure		404,500 {object} responses.ErrorResponse[responses.GenericMessage]
+//	@Router			/api/permissions/{id} [delete]
+//	@Produce		json
 func PermissionDELETE(context *fiber.Ctx) error {
 	paramValidator := new(validators.ParamValidator)
 

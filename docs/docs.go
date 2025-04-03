@@ -21,6 +21,223 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/api/permissions": {
+            "get": {
+                "description": "List all permissions",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "authorization"
+                ],
+                "summary": "List permissions",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/VEDA95_open_board_api_internal_http_responses.OkCollectionResponse-VEDA95_open_board_api_internal_auth_Permission"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Create permission",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "authorization"
+                ],
+                "summary": "Create permission",
+                "parameters": [
+                    {
+                        "description": "Request Data",
+                        "name": "request",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/VEDA95_open_board_api_internal_http_validators.CreatePermissionValidator"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/VEDA95_open_board_api_internal_http_responses.SuccessResponse-VEDA95_open_board_api_internal_auth_Permission"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_validators_ErrorResponseMap"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/permissions/{id}": {
+            "get": {
+                "description": "List permission by ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "authorization"
+                ],
+                "summary": "List permission",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Permission ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/VEDA95_open_board_api_internal_http_responses.OkResponse-VEDA95_open_board_api_internal_auth_Permission"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_validators_ErrorResponseMap"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Delete permission by ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "authorization"
+                ],
+                "summary": "Delete permission",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Permission ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/VEDA95_open_board_api_internal_http_responses.OkResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_validators_ErrorResponseMap"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "description": "Update permission by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "authorization"
+                ],
+                "summary": "Update permission",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Permission ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Request Data",
+                        "name": "request",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/VEDA95_open_board_api_internal_http_validators.UpdatePermissionValidator"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/VEDA95_open_board_api_internal_http_responses.SuccessResponse-VEDA95_open_board_api_internal_auth_Permission"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_validators_ErrorResponseMap"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage"
+                        }
+                    }
+                }
+            }
+        },
         "/api/roles": {
             "get": {
                 "description": "Get all roles",
@@ -241,6 +458,223 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/users": {
+            "get": {
+                "description": "List all users",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "List users",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/VEDA95_open_board_api_internal_http_responses.OkCollectionResponse-VEDA95_open_board_api_internal_auth_User"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Create user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Create user",
+                "parameters": [
+                    {
+                        "description": "request data",
+                        "name": "request",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/VEDA95_open_board_api_internal_http_validators.CreateUserValidator"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/VEDA95_open_board_api_internal_http_responses.SuccessResponse-VEDA95_open_board_api_internal_auth_User"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_validators_ErrorResponseMap"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/users/{id}": {
+            "get": {
+                "description": "List user by ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "List user",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "user ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/VEDA95_open_board_api_internal_http_responses.OkResponse-VEDA95_open_board_api_internal_auth_User"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_validators_ErrorResponseMap"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Delete user by ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Delete user",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "user ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/VEDA95_open_board_api_internal_http_responses.OkCollectionResponse-VEDA95_open_board_api_internal_auth_User"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_validators_ErrorResponseMap"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "description": "Update user by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Update user",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "user ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "request data",
+                        "name": "request",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/VEDA95_open_board_api_internal_http_responses.SuccessResponse-VEDA95_open_board_api_internal_auth_User"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/VEDA95_open_board_api_internal_http_responses.OkCollectionResponse-VEDA95_open_board_api_internal_auth_User"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_validators_ErrorResponseMap"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/login": {
             "post": {
                 "description": "Handles local login process for users",
@@ -395,6 +829,149 @@ const docTemplate = `{
                 }
             }
         },
+        "/auth/me": {
+            "get": {
+                "description": "Retrieve own user details. IMPORTANT: The actual endpoint is '/auth/@me' (with @ symbol)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "authentication"
+                ],
+                "summary": "Retrieve user details",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/VEDA95_open_board_api_internal_http_responses.OkResponse-VEDA95_open_board_api_internal_auth_User"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Delete own user account. IMPORTANT: The actual endpoint is '/auth/@me' (with @ symbol)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "authentication"
+                ],
+                "summary": "Delete user account",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/VEDA95_open_board_api_internal_http_responses.OkResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "description": "Update own user details. IMPORTANT: The actual endpoint is '/auth/@me' (with @ symbol)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "authentication"
+                ],
+                "summary": "Update user details",
+                "parameters": [
+                    {
+                        "description": "request Data",
+                        "name": "request",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/VEDA95_open_board_api_internal_http_validators.UpdateUserValidator"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/VEDA95_open_board_api_internal_http_responses.SuccessResponse-VEDA95_open_board_api_internal_auth_User"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_validators_ErrorResponseMap"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/me/sessions": {
+            "get": {
+                "description": "List own active auth sessions. IMPORTANT: The actual endpoint is '/auth/@me/sessions' (with @ symbol)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "authentication"
+                ],
+                "summary": "List sessions",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/VEDA95_open_board_api_internal_http_responses.OkCollectionResponse-VEDA95_open_board_api_internal_auth_UserSessionReadOnly"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/refresh": {
             "post": {
                 "description": "Handles local user session renewal",
@@ -478,6 +1055,17 @@ const docTemplate = `{
                 }
             }
         },
+        "VEDA95_open_board_api_internal_auth.Permission": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "path": {
+                    "type": "string"
+                }
+            }
+        },
         "VEDA95_open_board_api_internal_auth.Role": {
             "type": "object",
             "properties": {
@@ -547,6 +1135,26 @@ const docTemplate = `{
                 }
             }
         },
+        "VEDA95_open_board_api_internal_auth.UserSessionReadOnly": {
+            "type": "object",
+            "properties": {
+                "date_created": {
+                    "type": "string"
+                },
+                "date_updated": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "ip_address": {
+                    "type": "string"
+                },
+                "user_agent": {
+                    "type": "string"
+                }
+            }
+        },
         "VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage": {
             "type": "object",
             "properties": {
@@ -577,6 +1185,23 @@ const docTemplate = `{
                 }
             }
         },
+        "VEDA95_open_board_api_internal_http_responses.OkCollectionResponse-VEDA95_open_board_api_internal_auth_Permission": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "count": {
+                    "type": "integer"
+                },
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/VEDA95_open_board_api_internal_auth.Permission"
+                    }
+                }
+            }
+        },
         "VEDA95_open_board_api_internal_http_responses.OkCollectionResponse-VEDA95_open_board_api_internal_auth_Role": {
             "type": "object",
             "properties": {
@@ -594,6 +1219,51 @@ const docTemplate = `{
                 }
             }
         },
+        "VEDA95_open_board_api_internal_http_responses.OkCollectionResponse-VEDA95_open_board_api_internal_auth_User": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "count": {
+                    "type": "integer"
+                },
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/VEDA95_open_board_api_internal_auth.User"
+                    }
+                }
+            }
+        },
+        "VEDA95_open_board_api_internal_http_responses.OkCollectionResponse-VEDA95_open_board_api_internal_auth_UserSessionReadOnly": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "count": {
+                    "type": "integer"
+                },
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/VEDA95_open_board_api_internal_auth.UserSessionReadOnly"
+                    }
+                }
+            }
+        },
+        "VEDA95_open_board_api_internal_http_responses.OkResponse-VEDA95_open_board_api_internal_auth_Permission": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "data": {
+                    "$ref": "#/definitions/VEDA95_open_board_api_internal_auth.Permission"
+                }
+            }
+        },
         "VEDA95_open_board_api_internal_http_responses.OkResponse-VEDA95_open_board_api_internal_auth_Role": {
             "type": "object",
             "properties": {
@@ -602,6 +1272,17 @@ const docTemplate = `{
                 },
                 "data": {
                     "$ref": "#/definitions/VEDA95_open_board_api_internal_auth.Role"
+                }
+            }
+        },
+        "VEDA95_open_board_api_internal_http_responses.OkResponse-VEDA95_open_board_api_internal_auth_User": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "data": {
+                    "$ref": "#/definitions/VEDA95_open_board_api_internal_auth.User"
                 }
             }
         },
@@ -630,6 +1311,20 @@ const docTemplate = `{
                 }
             }
         },
+        "VEDA95_open_board_api_internal_http_responses.SuccessResponse-VEDA95_open_board_api_internal_auth_Permission": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "data": {
+                    "$ref": "#/definitions/VEDA95_open_board_api_internal_auth.Permission"
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
         "VEDA95_open_board_api_internal_http_responses.SuccessResponse-VEDA95_open_board_api_internal_auth_Role": {
             "type": "object",
             "properties": {
@@ -641,6 +1336,33 @@ const docTemplate = `{
                 },
                 "message": {
                     "type": "string"
+                }
+            }
+        },
+        "VEDA95_open_board_api_internal_http_responses.SuccessResponse-VEDA95_open_board_api_internal_auth_User": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "data": {
+                    "$ref": "#/definitions/VEDA95_open_board_api_internal_auth.User"
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "VEDA95_open_board_api_internal_http_validators.CreatePermissionValidator": {
+            "type": "object",
+            "required": [
+                "path"
+            ],
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "minLength": 1
                 }
             }
         },
@@ -660,6 +1382,43 @@ const docTemplate = `{
                     "items": {
                         "type": "string"
                     }
+                }
+            }
+        },
+        "VEDA95_open_board_api_internal_http_validators.CreateUserValidator": {
+            "type": "object",
+            "required": [
+                "email_address",
+                "password",
+                "username"
+            ],
+            "properties": {
+                "email_address": {
+                    "type": "string"
+                },
+                "first_name": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "last_name": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "password": {
+                    "type": "string",
+                    "maxLength": 32,
+                    "minLength": 8
+                },
+                "roles": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "username": {
+                    "type": "string",
+                    "minLength": 1
                 }
             }
         },
@@ -747,6 +1506,16 @@ const docTemplate = `{
                 }
             }
         },
+        "VEDA95_open_board_api_internal_http_validators.UpdatePermissionValidator": {
+            "type": "object",
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "minLength": 1
+                }
+            }
+        },
         "VEDA95_open_board_api_internal_http_validators.UpdateRoleValidator": {
             "type": "object",
             "properties": {
@@ -760,6 +1529,32 @@ const docTemplate = `{
                     "items": {
                         "type": "string"
                     }
+                }
+            }
+        },
+        "VEDA95_open_board_api_internal_http_validators.UpdateUserValidator": {
+            "type": "object",
+            "properties": {
+                "email_address": {
+                    "type": "string"
+                },
+                "first_name": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "last_name": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "roles": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "username": {
+                    "type": "string",
+                    "minLength": 1
                 }
             }
         }
