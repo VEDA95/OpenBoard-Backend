@@ -7,8 +7,6 @@ definitions:
         type: string
       expires_in:
         type: integer
-      message:
-        type: string
       refresh_expires_in:
         type: integer
         x-nullable: true
@@ -84,12 +82,23 @@ definitions:
       message:
         type: string
     type: object
-  VEDA95_open_board_api_internal_http_responses.OkResponse-VEDA95_open_board_api_internal_auth_LocalUserLogin:
+  VEDA95_open_board_api_internal_http_responses.OkCollectionResponse-VEDA95_open_board_api_internal_auth_Role:
+    properties:
+      code:
+        type: integer
+      count:
+        type: integer
+      data:
+        items:
+          $ref: '#/definitions/VEDA95_open_board_api_internal_auth.Role'
+        type: array
+    type: object
+  VEDA95_open_board_api_internal_http_responses.OkResponse-VEDA95_open_board_api_internal_auth_Role:
     properties:
       code:
         type: integer
       data:
-        $ref: '#/definitions/VEDA95_open_board_api_internal_auth.LocalUserLogin'
+        $ref: '#/definitions/VEDA95_open_board_api_internal_auth.Role'
     type: object
   VEDA95_open_board_api_internal_http_responses.OkResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage:
     properties:
@@ -97,6 +106,37 @@ definitions:
         type: integer
       data:
         $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.GenericMessage'
+    type: object
+  VEDA95_open_board_api_internal_http_responses.SuccessResponse-VEDA95_open_board_api_internal_auth_LocalUserLogin:
+    properties:
+      code:
+        type: integer
+      data:
+        $ref: '#/definitions/VEDA95_open_board_api_internal_auth.LocalUserLogin'
+      message:
+        type: string
+    type: object
+  VEDA95_open_board_api_internal_http_responses.SuccessResponse-VEDA95_open_board_api_internal_auth_Role:
+    properties:
+      code:
+        type: integer
+      data:
+        $ref: '#/definitions/VEDA95_open_board_api_internal_auth.Role'
+      message:
+        type: string
+    type: object
+  VEDA95_open_board_api_internal_http_validators.CreateRoleValidator:
+    properties:
+      name:
+        maxLength: 255
+        minLength: 1
+        type: string
+      permissions:
+        items:
+          type: string
+        type: array
+    required:
+    - name
     type: object
   VEDA95_open_board_api_internal_http_validators.ErrorResponse:
     properties:
@@ -156,12 +196,168 @@ definitions:
     required:
     - type
     type: object
+  VEDA95_open_board_api_internal_http_validators.UpdateRoleValidator:
+    properties:
+      name:
+        maxLength: 255
+        minLength: 1
+        type: string
+      permissions:
+        items:
+          type: string
+        type: array
+    type: object
 info:
   contact: {}
   description: This is the REST API backend for the Open Board project...
   title: Open Board Backend API
   version: "1.0"
 paths:
+  /api/roles:
+    get:
+      description: Get all roles
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.OkCollectionResponse-VEDA95_open_board_api_internal_auth_Role'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+      summary: List roles
+      tags:
+      - authorization
+    post:
+      consumes:
+      - application/json
+      description: Create Role
+      parameters:
+      - description: Request Data
+        in: body
+        name: request
+        schema:
+          $ref: '#/definitions/VEDA95_open_board_api_internal_http_validators.CreateRoleValidator'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.SuccessResponse-VEDA95_open_board_api_internal_auth_Role'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_validators_ErrorResponseMap'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+      summary: Create role
+      tags:
+      - authorization
+  /api/roles/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete Role by ID
+      parameters:
+      - description: Role ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.OkResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_validators_ErrorResponseMap'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+      summary: Delete role
+      tags:
+      - authorization
+    get:
+      description: Get role by ID
+      parameters:
+      - description: Role ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.OkResponse-VEDA95_open_board_api_internal_auth_Role'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_validators_ErrorResponseMap'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+      summary: List role
+      tags:
+      - authorization
+    patch:
+      consumes:
+      - application/json
+      description: Update role by ID
+      parameters:
+      - description: Role ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Request Data
+        in: body
+        name: request
+        schema:
+          $ref: '#/definitions/VEDA95_open_board_api_internal_http_validators.UpdateRoleValidator'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.SuccessResponse-VEDA95_open_board_api_internal_auth_Role'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_validators_ErrorResponseMap'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+      summary: Update role
+      tags:
+      - authorization
   /auth/login:
     post:
       consumes:
@@ -179,7 +375,7 @@ paths:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.OkResponse-VEDA95_open_board_api_internal_auth_LocalUserLogin'
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.SuccessResponse-VEDA95_open_board_api_internal_auth_LocalUserLogin'
         "401":
           description: Unauthorized
           schema:
@@ -196,9 +392,9 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
-      summary: logs in user
+      summary: Logs in user
       tags:
-      - auth
+      - authentication
   /auth/logout:
     post:
       consumes:
@@ -225,9 +421,9 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
-      summary: logs out user
+      summary: Logs out user
       tags:
-      - auth
+      - authentication
   /auth/logout/{id}:
     post:
       consumes:
@@ -259,9 +455,9 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
-      summary: logs out user by session ID
+      summary: Logs out user by session ID
       tags:
-      - auth
+      - authentication
   /auth/refresh:
     post:
       consumes:
@@ -279,7 +475,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.OkResponse-VEDA95_open_board_api_internal_auth_LocalUserLogin'
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.SuccessResponse-VEDA95_open_board_api_internal_auth_LocalUserLogin'
         "401":
           description: Unauthorized
           schema:
@@ -296,9 +492,9 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
-      summary: refreshes user session
+      summary: Refreshes user session
       tags:
-      - auth
+      - authentication
 produces:
 - application/json
 swagger: "2.0"

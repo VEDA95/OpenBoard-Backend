@@ -10,6 +10,11 @@ type OkCollectionResponse[T interface{}] struct {
 	Data []T `json:"data"`
 }
 
+type SuccessResponse[T interface{}] struct {
+	OkResponse[T]
+	GenericMessage
+}
+
 func OKResponse[T interface{}](code int, data T) *OkResponse[T] {
 	return &OkResponse[T]{
 		BaseResponse: BaseResponse{
@@ -28,5 +33,15 @@ func OKCollectionResponse[T interface{}](code int, data []T) *OkCollectionRespon
 			Count: len(data),
 		},
 		Data: data,
+	}
+}
+
+func CreateSuccessResponse[T interface{}](code int, message string, data T) *SuccessResponse[T] {
+	return &SuccessResponse[T]{
+		GenericMessage: GenericMessage{Message: message},
+		OkResponse: OkResponse[T]{
+			BaseResponse: BaseResponse{Code: code},
+			Data:         data,
+		},
 	}
 }

@@ -12,6 +12,15 @@ import (
 	"slices"
 )
 
+// RolesGET godoc
+//
+//	@Description	Get all roles
+//	@Summary 		List roles
+//	@Tags 			authorization
+//	@Success		200	{object} responses.OkCollectionResponse[auth.Role]
+//	@Failure		500 {object} responses.ErrorResponse[responses.GenericMessage]
+//	@Router			/api/roles [get]
+//	@Produce		json
 func RolesGET(context *fiber.Ctx) error {
 	roles, err := auth.GetRoles()
 
@@ -22,6 +31,18 @@ func RolesGET(context *fiber.Ctx) error {
 	return responses.JSONResponse(context, fiber.StatusOK, responses.OKCollectionResponse(fiber.StatusOK, roles))
 }
 
+// RolesPOST godoc
+//
+//		@Description	Create Role
+//		@Summary 		Create role
+//		@Tags 			authorization
+//		@param			request body validators.CreateRoleValidator false "Request Data"
+//	 	@Success		201	{object} responses.SuccessResponse[auth.Role]
+//		@Failure		422 {object} responses.ErrorResponse[validators.ErrorResponseMap]
+//		@Failure		500 {object} responses.ErrorResponse[responses.GenericMessage]
+//		@Router			/api/roles [post]
+//		@Accept			json
+//		@Produce		json
 func RolesPOST(context *fiber.Ctx) error {
 	dataValidator := new(validators.CreateRoleValidator)
 
@@ -90,13 +111,25 @@ func RolesPOST(context *fiber.Ctx) error {
 	return responses.JSONResponse(
 		context,
 		fiber.StatusCreated,
-		responses.OKResponse(fiber.StatusCreated, fiber.Map{
-			"message": fmt.Sprintf("Role: %s has be successfully created", output.Id),
-			"role":    output,
-		}),
+		responses.CreateSuccessResponse(
+			fiber.StatusCreated,
+			fmt.Sprintf("Role: %s has be successfully created", output.Id),
+			output,
+		),
 	)
 }
 
+// RoleGET godoc
+//
+//	@Description	Get role by ID
+//	@Summary 		List role
+//	@Tags 			authorization
+//	@Param			id path string true "Role ID"
+//	@Success		200	{object} responses.OkResponse[auth.Role]
+//	@Failure		422 {object} responses.ErrorResponse[validators.ErrorResponseMap]
+//	@Failure		404,500 {object} responses.ErrorResponse[responses.GenericMessage]
+//	@Router			/api/roles/{id} [get]
+//	@Produce		json
 func RoleGET(context *fiber.Ctx) error {
 	paramValidator := new(validators.ParamValidator)
 
@@ -121,6 +154,19 @@ func RoleGET(context *fiber.Ctx) error {
 	return responses.JSONResponse(context, fiber.StatusOK, responses.OKResponse(fiber.StatusOK, role))
 }
 
+// RolePATCH godoc
+//
+//	@Description	Update role by ID
+//	@Summary 		Update role
+//	@Tags 			authorization
+//	@Param			id path string true "Role ID"
+//	@Param			request body validators.UpdateRoleValidator false "Request Data"
+//	@Success		200	{object} responses.SuccessResponse[auth.Role]
+//	@Failure		422 {object} responses.ErrorResponse[validators.ErrorResponseMap]
+//	@Failure		404,500 {object} responses.ErrorResponse[responses.GenericMessage]
+//	@Router			/api/roles/{id} [patch]
+//	@Accept			json
+//	@Produce		json
 func RolePATCH(context *fiber.Ctx) error {
 	paramValidator := new(validators.ParamValidator)
 
@@ -243,13 +289,22 @@ func RolePATCH(context *fiber.Ctx) error {
 	return responses.JSONResponse(
 		context,
 		fiber.StatusOK,
-		responses.OKResponse(fiber.StatusOK, fiber.Map{
-			"message": fmt.Sprintf("role: %s has been updated successfully", role.Id),
-			"role":    role,
-		}),
+		responses.CreateSuccessResponse(fiber.StatusOK, fmt.Sprintf("role: %s has been updated successfully", role.Id), role),
 	)
 }
 
+// RoleDELETE godoc
+//
+//	@Description	Delete Role by ID
+//	@Summary 		Delete role
+//	@Tags 			authorization
+//	@Param			id path string true "Role ID"
+//	@Success		200	{object} responses.OkResponse[responses.GenericMessage]
+//	@Failure		422 {object} responses.ErrorResponse[validators.ErrorResponseMap]
+//	@Failure		404,500 {object} responses.ErrorResponse[responses.GenericMessage]
+//	@Router			/api/roles/{id} [delete]
+//	@Accept			json
+//	@Produce		json
 func RoleDELETE(context *fiber.Ctx) error {
 	paramValidator := new(validators.ParamValidator)
 

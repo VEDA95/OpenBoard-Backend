@@ -20,14 +20,12 @@ import (
 // LocalLogin godoc
 //
 //		@Description	Handles local login process for users
-//		@Summary		logs in user
-//	 	@Tags			auth
+//		@Summary		Logs in user
+//	 	@Tags			authentication
 //		@Param 			request body validators.LocalLoginValidator false "Request Data"
-//		@Success		201	{object} responses.OkResponse[auth.LocalUserLogin]
-//		@Failure		401 {object} responses.ErrorResponse[responses.GenericMessage]
-//		@Failure		404 {object} responses.ErrorResponse[responses.GenericMessage]
+//		@Success		201	{object} responses.SuccessResponse[auth.LocalUserLogin]
 //		@Failure		422 {object} responses.ErrorResponse[validators.ErrorResponseMap]
-//		@Failure		500 {object} responses.ErrorResponse[responses.GenericMessage]
+//		@Failure		401,404,500 {object} responses.ErrorResponse[responses.GenericMessage]
 //		@Router			/auth/login [post]
 //		@Accept			json
 //		@Produce		json
@@ -172,7 +170,6 @@ func LocalLogin(context *fiber.Ctx) error {
 
 	user.LastLogin = &now
 	responseData := auth.LocalUserLogin{
-		Message:     fmt.Sprintf("%s has been successfully logged in", user.Username),
 		User:        user,
 		AccessToken: token,
 		ExpiresIn:   expiresIn,
@@ -186,15 +183,19 @@ func LocalLogin(context *fiber.Ctx) error {
 	return responses.JSONResponse(
 		context,
 		fiber.StatusCreated,
-		responses.OKResponse(fiber.StatusCreated, responseData),
+		responses.CreateSuccessResponse(
+			fiber.StatusCreated,
+			fmt.Sprintf("%s has been successfully logged in", user.Username),
+			responseData,
+		),
 	)
 }
 
 // LocalLogout godoc
 //
 //		@Description	Handles local logout process for users
-//		@Summary		logs out user
-//	 	@Tags			auth
+//		@Summary		Logs out user
+//	 	@Tags			authentication
 //		@Param 			request body validators.LocalLogoutBodyValidator false "Request Data"
 //		@Success		200	{object} responses.OkResponse[responses.GenericMessage]
 //		@Failure		422 {object} responses.ErrorResponse[validators.ErrorResponseMap]
@@ -252,8 +253,8 @@ func LocalLogout(context *fiber.Ctx) error {
 // LocalLogoutById godoc
 //
 //		@Description	Handles local logout process for users by session ID
-//		@Summary		logs out user by session ID
-//	 	@Tags			auth
+//		@Summary		Logs out user by session ID
+//	 	@Tags			authentication
 //		@Param			id path string true "Session ID"
 //		@Param 			request body validators.ReturnValidator false "Request Data"
 //		@Success		200	{object} responses.OkResponse[responses.GenericMessage]
@@ -319,14 +320,12 @@ func LocalLogoutById(context *fiber.Ctx) error {
 // LocalRefresh godoc
 //
 //		@Description	Handles local user session renewal
-//		@Summary		refreshes user session
-//	 	@Tags			auth
+//		@Summary		Refreshes user session
+//	 	@Tags			authentication
 //		@Param 			request body validators.ReturnValidator false "Request Data"
-//		@Success		200	{object} responses.OkResponse[auth.LocalUserLogin]
-//		@Failure		401 {object} responses.ErrorResponse[responses.GenericMessage]
-//		@Failure		404 {object} responses.ErrorResponse[responses.GenericMessage]
+//		@Success		200	{object} responses.SuccessResponse[auth.LocalUserLogin]
 //		@Failure		422 {object} responses.ErrorResponse[validators.ErrorResponseMap]
-//		@Failure		500 {object} responses.ErrorResponse[responses.GenericMessage]
+//		@Failure		401,404,500 {object} responses.ErrorResponse[responses.GenericMessage]
 //		@Router			/auth/refresh [post]
 //		@Accept			json
 //		@Produce		json
@@ -477,13 +476,16 @@ func LocalRefresh(context *fiber.Ctx) error {
 	return responses.JSONResponse(
 		context,
 		fiber.StatusOK,
-		responses.OKResponse(fiber.StatusOK, auth.LocalUserLogin{
-			Message:          fmt.Sprintf("%s auth session has been successfully refreshed", session.User.Username),
-			User:             session.User,
-			AccessToken:      accessToken,
-			RefreshToken:     &refreshToken,
-			ExpiresIn:        expiresIn,
-			RefreshExpiresIn: &refreshExpiresIn,
-		}),
+		responses.CreateSuccessResponse(
+			fiber.StatusOK,
+			fmt.Sprintf("%s auth session has been successfully refreshed", session.User.Username),
+			auth.LocalUserLogin{
+				User:             session.User,
+				AccessToken:      accessToken,
+				RefreshToken:     &refreshToken,
+				ExpiresIn:        expiresIn,
+				RefreshExpiresIn: &refreshExpiresIn,
+			},
+		),
 	)
 }
