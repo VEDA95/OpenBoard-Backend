@@ -17,6 +17,20 @@ import (
 	"time"
 )
 
+// LocalLogin godoc
+//
+//		@Description	Handles local login process for users
+//		@Summary		logs in user
+//	 	@Tags			auth
+//		@Param 			request body validators.LocalLoginValidator false "Request Data"
+//		@Success		201	{object} responses.OkResponse[auth.LocalUserLogin]
+//		@Failure		401 {object} responses.ErrorResponse[responses.GenericMessage]
+//		@Failure		404 {object} responses.ErrorResponse[responses.GenericMessage]
+//		@Failure		422 {object} responses.ErrorResponse[validators.ErrorResponseMap]
+//		@Failure		500 {object} responses.ErrorResponse[responses.GenericMessage]
+//		@Router			/auth/login [post]
+//		@Accept			json
+//		@Produce		json
 func LocalLogin(context *fiber.Ctx) error {
 	expiresInEnv := os.Getenv("AUTH_SESSION_EXPIRES_IN")
 	refreshExpiresInEnv := os.Getenv("AUTH_SESSION_REFRESH_EXPIRES_IN")
@@ -157,25 +171,37 @@ func LocalLogin(context *fiber.Ctx) error {
 	auth.AppendRolesToUser(rows, user)
 
 	user.LastLogin = &now
-	responseMap := fiber.Map{
-		"message":      fmt.Sprintf("%s has been successfully logged in", user.Username),
-		"user":         user,
-		"access_token": token,
-		"expires_in":   expiresIn,
+	responseData := auth.LocalUserLogin{
+		Message:     fmt.Sprintf("%s has been successfully logged in", user.Username),
+		User:        user,
+		AccessToken: token,
+		ExpiresIn:   expiresIn,
 	}
 
 	if dataValidator.Remember {
-		responseMap["refresh_expires_in"] = refreshExpiresIn
-		responseMap["refresh_token"] = queryValues[len(queryValues)-1]
+		responseData.RefreshExpiresIn = &refreshExpiresIn
+		responseData.RefreshToken = queryValues[len(queryValues)-1].(*string)
 	}
 
 	return responses.JSONResponse(
 		context,
 		fiber.StatusCreated,
-		responses.OKResponse(fiber.StatusOK, responseMap),
+		responses.OKResponse(fiber.StatusCreated, responseData),
 	)
 }
 
+// LocalLogout godoc
+//
+//		@Description	Handles local logout process for users
+//		@Summary		logs out user
+//	 	@Tags			auth
+//		@Param 			request body validators.LocalLogoutBodyValidator false "Request Data"
+//		@Success		200	{object} responses.OkResponse[auth.LocalUserLogin]
+//		@Failure		422 {object} responses.ErrorResponse[validators.ErrorResponseMap]
+//		@Failure		500 {object} responses.ErrorResponse[responses.GenericMessage]
+//		@Router			/auth/logout [post]
+//		@Accept			json
+//		@Produce		json
 func LocalLogout(context *fiber.Ctx) error {
 	logoutValidator := new(validators.LocalLogoutBodyValidator)
 
@@ -223,6 +249,19 @@ func LocalLogout(context *fiber.Ctx) error {
 	)
 }
 
+// LocalLogoutById godoc
+//
+//		@Description	Handles local logout process for users by session ID
+//		@Summary		logs out user by session ID
+//	 	@Tags			auth
+//		@Param			id path string true "Session ID"
+//		@Param 			request body validators.ReturnValidator false "Request Data"
+//		@Success		200	{object} responses.OkResponse[auth.LocalUserLogin]
+//		@Failure		422 {object} responses.ErrorResponse[validators.ErrorResponseMap]
+//		@Failure		500 {object} responses.ErrorResponse[responses.GenericMessage]
+//		@Router			/auth/logout/{id} [post]
+//		@Accept			json
+//		@Produce		json
 func LocalLogoutById(context *fiber.Ctx) error {
 	paramValidator := new(validators.ParamValidator)
 
@@ -277,6 +316,20 @@ func LocalLogoutById(context *fiber.Ctx) error {
 	)
 }
 
+// LocalRefresh godoc
+//
+//		@Description	Handles local user session renewal
+//		@Summary		refreshes user session
+//	 	@Tags			auth
+//		@Param 			request body validators.ReturnValidator false "Request Data"
+//		@Success		200	{object} responses.OkResponse[auth.LocalUserLogin]
+//		@Failure		401 {object} responses.ErrorResponse[responses.GenericMessage]
+//		@Failure		404 {object} responses.ErrorResponse[responses.GenericMessage]
+//		@Failure		422 {object} responses.ErrorResponse[validators.ErrorResponseMap]
+//		@Failure		500 {object} responses.ErrorResponse[responses.GenericMessage]
+//		@Router			/auth/refresh [post]
+//		@Accept			json
+//		@Produce		json
 func LocalRefresh(context *fiber.Ctx) error {
 	expiresInEnv := os.Getenv("AUTH_SESSION_EXPIRES_IN")
 	refreshExpiresInEnv := os.Getenv("AUTH_SESSION_REFRESH_EXPIRES_IN")

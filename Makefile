@@ -17,6 +17,9 @@ run_dev_api:
 run_dev_migration_app:
 	go run $(MIGRATION_ENTRYPOINT) $(ARGS)
 
+build_swagger_documentation:
+	swag init --parseDependency -g ./cmd/server/main.go
+
 clean:
 	go clean -cache -modcache
 	rm -rf ./build/*%                                                                                                                                                                                                              veda@Stefans-MacBook-Pro api %

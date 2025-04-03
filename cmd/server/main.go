@@ -1,6 +1,7 @@
 package main
 
 import (
+	_ "VEDA95/open_board/api/docs"
 	"VEDA95/open_board/api/internal/config"
 	"VEDA95/open_board/api/internal/db"
 	"VEDA95/open_board/api/internal/errors"
@@ -13,10 +14,16 @@ import (
 	"github.com/gofiber/contrib/fiberzerolog"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gofiber/swagger"
 	"log"
 	"os"
 )
 
+// @Title Open Board Backend API
+// @Version 1.0
+// @Description This is the REST API backend for the Open Board project...
+// @Accept json
+// @Produce json
 func main() {
 	if err := config.LoadEnvConfigs("./env"); err != nil {
 		log.Fatal(err)
@@ -67,6 +74,7 @@ func main() {
 		AllowMethods: "GET, POST, PATCH, DELETE",
 		AllowHeaders: "Origin, Content-Type, Accept, Authorization",
 	}))
+	app.Get("/swagger/*", swagger.HandlerDefault)
 	authGroup.Post("/login", routes.LocalLogin)
 	authGroup.Post("/refresh", routes.LocalRefresh)
 	authGroup.Post("/logout/:id", middleware.CheckUserAuthentication, routes.LocalLogoutById)

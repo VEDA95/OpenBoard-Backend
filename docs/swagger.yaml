@@ -1,0 +1,297 @@
+consumes:
+- application/json
+definitions:
+  VEDA95_open_board_api_internal_auth.LocalUserLogin:
+    properties:
+      access_token:
+        type: string
+      expires_in:
+        type: integer
+      message:
+        type: string
+      refresh_expires_in:
+        type: integer
+        x-nullable: true
+        x-omitempty: true
+      refresh_token:
+        type: string
+        x-nullable: true
+        x-omitempty: true
+      user:
+        $ref: '#/definitions/VEDA95_open_board_api_internal_auth.User'
+    type: object
+  VEDA95_open_board_api_internal_auth.Role:
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+      permissions:
+        items:
+          $ref: '#/definitions/VEDA95_open_board_api_internal_auth.RolePermission'
+        type: array
+    type: object
+  VEDA95_open_board_api_internal_auth.RolePermission:
+    properties:
+      id:
+        type: string
+      path:
+        type: string
+    type: object
+  VEDA95_open_board_api_internal_auth.User:
+    properties:
+      date_created:
+        type: string
+      date_updated:
+        type: string
+      email_address:
+        type: string
+      email_verified:
+        type: boolean
+      enabled:
+        type: boolean
+      first_name:
+        type: string
+      id:
+        type: string
+      last_login:
+        type: string
+      last_name:
+        type: string
+      roles:
+        items:
+          $ref: '#/definitions/VEDA95_open_board_api_internal_auth.Role'
+        type: array
+      username:
+        type: string
+    type: object
+  VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage:
+    properties:
+      code:
+        type: integer
+      errors:
+        $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.GenericMessage'
+    type: object
+  VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_validators_ErrorResponseMap:
+    properties:
+      code:
+        type: integer
+      errors:
+        $ref: '#/definitions/VEDA95_open_board_api_internal_http_validators.ErrorResponseMap'
+    type: object
+  VEDA95_open_board_api_internal_http_responses.GenericMessage:
+    properties:
+      message:
+        type: string
+    type: object
+  VEDA95_open_board_api_internal_http_responses.OkResponse-VEDA95_open_board_api_internal_auth_LocalUserLogin:
+    properties:
+      code:
+        type: integer
+      data:
+        $ref: '#/definitions/VEDA95_open_board_api_internal_auth.LocalUserLogin'
+    type: object
+  VEDA95_open_board_api_internal_http_validators.ErrorResponse:
+    properties:
+      err_value:
+        type: string
+      failed_field:
+        type: string
+      tag:
+        type: string
+      value: {}
+    type: object
+  VEDA95_open_board_api_internal_http_validators.ErrorResponseMap:
+    additionalProperties:
+      $ref: '#/definitions/VEDA95_open_board_api_internal_http_validators.ErrorResponse'
+    type: object
+  VEDA95_open_board_api_internal_http_validators.LocalLoginValidator:
+    properties:
+      password:
+        minLength: 8
+        type: string
+      remember_me:
+        default: false
+        type: boolean
+      type:
+        enum:
+        - token
+        - session
+        type: string
+      username:
+        minLength: 1
+        type: string
+    required:
+    - password
+    - type
+    - username
+    type: object
+  VEDA95_open_board_api_internal_http_validators.LocalLogoutBodyValidator:
+    properties:
+      all:
+        default: false
+        type: boolean
+      type:
+        enum:
+        - token
+        - session
+        type: string
+    required:
+    - type
+    type: object
+  VEDA95_open_board_api_internal_http_validators.ReturnValidator:
+    properties:
+      type:
+        enum:
+        - token
+        - session
+        type: string
+    required:
+    - type
+    type: object
+info:
+  contact: {}
+  description: This is the REST API backend for the Open Board project...
+  title: Open Board Backend API
+  version: "1.0"
+paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Handles local login process for users
+      parameters:
+      - description: Request Data
+        in: body
+        name: request
+        schema:
+          $ref: '#/definitions/VEDA95_open_board_api_internal_http_validators.LocalLoginValidator'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.OkResponse-VEDA95_open_board_api_internal_auth_LocalUserLogin'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_validators_ErrorResponseMap'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+      summary: logs in user
+      tags:
+      - auth
+  /auth/logout:
+    post:
+      consumes:
+      - application/json
+      description: Handles local logout process for users
+      parameters:
+      - description: Request Data
+        in: body
+        name: request
+        schema:
+          $ref: '#/definitions/VEDA95_open_board_api_internal_http_validators.LocalLogoutBodyValidator'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.OkResponse-VEDA95_open_board_api_internal_auth_LocalUserLogin'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_validators_ErrorResponseMap'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+      summary: logs out user
+      tags:
+      - auth
+  /auth/logout/{id}:
+    post:
+      consumes:
+      - application/json
+      description: Handles local logout process for users by session ID
+      parameters:
+      - description: Session ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Request Data
+        in: body
+        name: request
+        schema:
+          $ref: '#/definitions/VEDA95_open_board_api_internal_http_validators.ReturnValidator'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.OkResponse-VEDA95_open_board_api_internal_auth_LocalUserLogin'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_validators_ErrorResponseMap'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+      summary: logs out user by session ID
+      tags:
+      - auth
+  /auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Handles local user session renewal
+      parameters:
+      - description: Request Data
+        in: body
+        name: request
+        schema:
+          $ref: '#/definitions/VEDA95_open_board_api_internal_http_validators.ReturnValidator'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.OkResponse-VEDA95_open_board_api_internal_auth_LocalUserLogin'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_validators_ErrorResponseMap'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+      summary: refreshes user session
+      tags:
+      - auth
+produces:
+- application/json
+swagger: "2.0"
