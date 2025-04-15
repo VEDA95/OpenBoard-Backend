@@ -47,8 +47,17 @@ func CheckUserAuthentication(context *fiber.Ctx) error {
 	now := time.Now()
 
 	log.Logger.Debug().Time("now", now).Msg("current time")
-	log.Logger.Debug().Time("session_expires_on", session.ExpiresOn).Time("session_refresh_expires_on", *session.RefreshExpiresOn).Msg("session expiration date")
-	log.Logger.Debug().Bool("is_after_expiration", now.After(session.ExpiresOn)).Bool("is_after_refresh_expiration", now.After(*session.RefreshExpiresOn)).Msg("is current time past the expiration date")
+	log.Logger.Debug().
+		Time("session_expires_on", session.ExpiresOn).
+		Bool("is_after_expiration", now.After(session.ExpiresOn)).
+		Msg("session expiration date")
+
+	if session.RefreshExpiresOn != nil {
+		log.Logger.Debug().
+			Time("session_refresh_expires_on", *session.RefreshExpiresOn).
+			Bool("is_after_refresh_expiration", now.After(*session.RefreshExpiresOn)).
+			Msg("refresh session expiration date")
+	}
 
 	if now.After(session.ExpiresOn) {
 		if session.RefreshExpiresOn != nil && now.After(*session.RefreshExpiresOn) {
@@ -80,7 +89,7 @@ func CheckUserAuthentication(context *fiber.Ctx) error {
 	}
 
 	auth.AppendRolesToUser(rows, session.User)
-	
+
 	context.Locals("auth_session", session)
 
 	return context.Next()
