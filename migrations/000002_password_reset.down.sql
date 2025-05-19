@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS "open_board_password_reset_tokens" CASCADE;
