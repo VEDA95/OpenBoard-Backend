@@ -70,9 +70,10 @@ func main() {
 
 	app.Use(fiberzerolog.New(fiberzerolog.Config{Logger: &applogger.Logger}))
 	app.Use(cors.New(cors.Config{
-		AllowOrigins: "*",
-		AllowMethods: "GET, POST, PATCH, DELETE",
-		AllowHeaders: "Origin, Content-Type, Accept, Authorization",
+		AllowOrigins:     "http://localhost:3000",
+		AllowMethods:     "GET, POST, PUT, PATCH, DELETE",
+		AllowHeaders:     "Origin, Content-Type, Accept, Authorization",
+		AllowCredentials: true,
 	}))
 	app.Get("/swagger/*", swagger.HandlerDefault)
 	authGroup.Post("/login", routes.LocalLogin)
