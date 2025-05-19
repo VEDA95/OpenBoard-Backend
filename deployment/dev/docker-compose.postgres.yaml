@@ -8,8 +8,8 @@ services:
 
     volumes:
       - ./data/postgres:/var/lib/postgresql/data
-      - /etc/timezone:/etc/timezone:ro
-      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone
+      - /etc/localtime:/etc/localtime
 
     environment:
       - POSTGRES_PASSWORD=GNX-0093
