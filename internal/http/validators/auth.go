@@ -24,8 +24,12 @@ type UpdateUserValidator struct {
 	Roles     *[]string `json:"roles,omitempty" validate:"omitempty"`
 }
 
+type ResetPasswordUserLookupValidator struct {
+	Email string `json:"email" validate:"required,email"`
+}
+
 type ResetPasswordValidator struct {
-	CurrentPassword string `json:"current_password" validate:"required,min=8,max=32"`
+	Token           string `json:"token" validate:"required,min=1"`
 	NewPassword     string `json:"new_password" validate:"required,min=8,max=32"`
 	ConfirmPassword string `json:"confirm_password" validate:"required,eqfield=NewPassword"`
 }

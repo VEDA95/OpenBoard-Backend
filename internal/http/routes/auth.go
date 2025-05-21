@@ -3,6 +3,7 @@ package routes
 import (
 	"VEDA95/open_board/api/internal/auth"
 	"VEDA95/open_board/api/internal/db"
+	"VEDA95/open_board/api/internal/email"
 	"VEDA95/open_board/api/internal/errors"
 	"VEDA95/open_board/api/internal/http/responses"
 	"VEDA95/open_board/api/internal/http/validators"
@@ -11,6 +12,7 @@ import (
 	"fmt"
 	"github.com/gofiber/fiber/v2"
 	"github.com/huandu/go-sqlbuilder"
+	"github.com/wneessen/go-mail"
 	"os"
 	"strconv"
 	"strings"
@@ -81,7 +83,7 @@ func LocalLogin(context *fiber.Ctx) error {
 		return err
 	}
 
-	now := time.Now()
+	now := time.Now().Local()
 	queryColumns := []string{"user_id", "expires_on", "session_type", "access_token", "ip_address", "user_agent"}
 	queryValues := []interface{}{
 		user.Id,
@@ -176,8 +178,9 @@ func LocalLogin(context *fiber.Ctx) error {
 	}
 
 	if dataValidator.Remember {
+		refreshToken := queryValues[len(queryValues)-1].(string)
 		responseData.RefreshExpiresIn = &refreshExpiresIn
-		responseData.RefreshToken = queryValues[len(queryValues)-1].(*string)
+		responseData.RefreshToken = &refreshToken
 	}
 
 	return responses.JSONResponse(
@@ -378,7 +381,7 @@ func LocalRefresh(context *fiber.Ctx) error {
 	}
 
 	var session auth.UserSession
-	now := time.Now()
+	now := time.Now().Local()
 	authToken := authHeaderSplit[1]
 	sessionQuery := auth.GetSessionQuery()
 	sessionQuery.Where(sessionQuery.Equal("refresh_token", authToken))
@@ -488,4 +491,151 @@ func LocalRefresh(context *fiber.Ctx) error {
 			},
 		),
 	)
+}
+
+func LocalUnauthenticatedPasswordTokenIssuer(context *fiber.Ctx) error {
+	validatorData := new(validators.ResetPasswordUserLookupValidator)
+
+	if err := context.BodyParser(validatorData); err != nil {
+		return err
+	}
+
+	if errs := validators.Instance.Validate(validatorData); errs != nil {
+		return errors.CreateValidationError(errs)
+	}
+
+	user := new(auth.User)
+	usersQuery := auth.UsersQuery()
+
+	usersQuery.Where(usersQuery.Equal("email", validatorData.Email))
+
+	if err := db.Instance.One(usersQuery, user); err != nil {
+		return err
+	}
+
+	if user == nil {
+		return fiber.NewError(fiber.StatusNotFound, "user not found")
+	}
+
+	token, err := auth.CreateSessionToken()
+
+	if err != nil {
+		log.Logger.Err(err).Msg("unable to create password reset token")
+	}
+
+	passwordResetQuery := sqlbuilder.InsertInto("open_board_password_reset_token").
+		Cols("id", "expires_on", "type", "user_id").
+		Values(token, time.Now().Add(time.Minute*15), "form", user.Id)
+
+	if err := db.Instance.Exec(passwordResetQuery); err != nil {
+		return err
+	}
+
+	go func() {
+		if email.MailClient == nil {
+			log.Logger.Warn().Msg("email client is nil. Skipping sending email...")
+			return
+		}
+
+		err := email.MailClient.SendMessage(
+			"Open Board Password Reset",
+			validatorData.Email,
+			mail.TypeTextHTML,
+			email.MailTemplateStore.RenderTemplate("login_password_reset", validatorData),
+		)
+
+		if err != nil {
+			log.Logger.Warn().Err(err).Msg("unable to send email")
+		}
+	}()
+
+	return responses.JSONResponse(
+		context,
+		fiber.StatusOK,
+		responses.OKResponse(
+			fiber.StatusOK,
+			responses.GenericMessage{Message: "Please check your email to recover your password"},
+		),
+	)
+}
+
+func LocalUnauthenticatedPasswordReset(context *fiber.Ctx) error {
+	validatorData := new(validators.ResetPasswordValidator)
+
+	if err := context.BodyParser(validatorData); err != nil {
+		return err
+	}
+
+	if errs := validators.Instance.Validate(validatorData); errs != nil {
+		return errors.CreateValidationError(errs)
+	}
+
+	resetToken := new(auth.PasswordResetToken)
+	resetTokenQuery := sqlbuilder.Select("id", "date_created", "type", "user_id", "expires_on").From("open_board_password_reset_token")
+
+	resetTokenQuery.Where(resetTokenQuery.Equal("id", validatorData.Token))
+
+	if err := db.Instance.One(resetTokenQuery, resetToken); err != nil {
+		return err
+	}
+
+	if resetToken == nil {
+		return fiber.NewError(fiber.StatusNotFound, "reset token not found")
+	}
+
+	now := time.Now().Local()
+	deleteResetTokenQuery := sqlbuilder.DeleteFrom("open_board_password_reset_token")
+
+	deleteResetTokenQuery.Where(deleteResetTokenQuery.Equal("id", validatorData.Token))
+
+	if now.After(resetToken.ExpiresOn) {
+		if err := db.Instance.Exec(deleteResetTokenQuery); err != nil {
+			return err
+		}
+
+		return fiber.NewError(fiber.StatusBadRequest, "reset token is expired")
+	}
+
+	if resetToken.Type != "form" {
+		return fiber.NewError(fiber.StatusBadRequest, "reset token is invalid")
+	}
+
+	hashedPassword, err := auth.HashPassword(validatorData.NewPassword)
+
+	if err != nil {
+		return err
+	}
+
+	transaction, err := db.Instance.Begin()
+
+	if err != nil {
+		return err
+	}
+
+	updateUserQuery := sqlbuilder.Update("open_board_user")
+	deleteSessionQuery := sqlbuilder.DeleteFrom("open_board_user_session")
+
+	updateUserQuery.Where(updateUserQuery.Assign("id", resetToken.UserId)).Set(
+		updateUserQuery.Assign("date_updated", now),
+		updateUserQuery.Assign("hashed_password", hashedPassword),
+	)
+	deleteSessionQuery.Where(deleteSessionQuery.Equal("user_id", resetToken.UserId))
+
+	if err := transaction.Exec(updateUserQuery); err != nil {
+		return err
+	}
+
+	if err := transaction.Exec(deleteSessionQuery); err != nil {
+		return err
+	}
+
+	if err := transaction.Exec(deleteResetTokenQuery); err != nil {
+		return err
+	}
+
+	if err := transaction.Commit(); err != nil {
+		return err
+	}
+
+	return responses.JSONResponse(context, fiber.StatusOK, responses.GenericMessage{Message: "Password reset successfully!"})
 }

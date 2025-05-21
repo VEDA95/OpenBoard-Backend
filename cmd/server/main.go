@@ -4,6 +4,7 @@ import (
 	_ "VEDA95/open_board/api/docs"
 	"VEDA95/open_board/api/internal/config"
 	"VEDA95/open_board/api/internal/db"
+	"VEDA95/open_board/api/internal/email"
 	"VEDA95/open_board/api/internal/errors"
 	"VEDA95/open_board/api/internal/http/middleware"
 	"VEDA95/open_board/api/internal/http/routes"
@@ -17,6 +18,7 @@ import (
 	"github.com/gofiber/swagger"
 	"log"
 	"os"
+	"strings"
 )
 
 // @Title Open Board Backend API
@@ -35,6 +37,22 @@ func main() {
 
 	if err := db.InitializeDBInstance(); err != nil {
 		log.Fatal(err)
+	}
+
+	if err := email.InitializeEmailClient(); err != nil {
+		if !strings.Contains(err.Error(), "required email settings are missing") {
+			log.Fatal(err)
+		}
+
+		log.Print("WARN:", err)
+	}
+
+	if err := email.InitializeEmailTemplateStore(); err != nil {
+		if !strings.Contains(err.Error(), "mail client not initialized") {
+			log.Fatal(err)
+		}
+
+		log.Print("WARN:", err)
 	}
 
 	defer db.Instance.Close()
@@ -80,6 +98,8 @@ func main() {
 	authGroup.Post("/refresh", routes.LocalRefresh)
 	authGroup.Post("/logout/:id", middleware.CheckUserAuthentication, routes.LocalLogoutById)
 	authGroup.Post("/logout", middleware.CheckUserAuthentication, routes.LocalLogout)
+	authGroup.Post("/password_reset", routes.LocalUnauthenticatedPasswordReset)
+	authGroup.Post("/password_reset/token", routes.LocalUnauthenticatedPasswordTokenIssuer)
 	authGroup.Get("/@me", middleware.CheckUserAuthentication, routes.UserInfoGET)
 	authGroup.Patch("/@me", middleware.CheckUserAuthentication, routes.UserInfoPATCH)
 	authGroup.Delete("/@me", middleware.CheckUserAuthentication, routes.UserInfoDELETE)
