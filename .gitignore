@@ -20,7 +20,7 @@
 # Go workspace file
 go.work
 go.work.sum
-
+env/.env.development
 
 .idea
 .vscode
