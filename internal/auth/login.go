@@ -16,4 +16,15 @@ type PasswordResetToken struct {
 	Type        string    `db:"type"`
 	UserId      string    `db:"user_id"`
 	ExpiresOn   time.Time `db:"expires_on"`
+	Token       string    `db:"token"`
+}
+
+type AuthenticatedPasswordResetResponse struct {
+	Token string `json:"token"`
+}
+
+type PasswordResetEmailVariables struct {
+	Token    string
+	Email    string
+	Username string
 }

@@ -11,14 +11,15 @@ import (
 	"VEDA95/open_board/api/internal/http/validators"
 	applogger "VEDA95/open_board/api/internal/log"
 	"fmt"
+	"log"
+	"os"
+	"strings"
+
 	"github.com/goccy/go-json"
 	"github.com/gofiber/contrib/fiberzerolog"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/swagger"
-	"log"
-	"os"
-	"strings"
 )
 
 // @Title Open Board Backend API
@@ -56,7 +57,6 @@ func main() {
 	}
 
 	defer db.Instance.Close()
-
 	validators.InitializeValidatorInstance()
 
 	port := os.Getenv("PORT")
@@ -70,10 +70,8 @@ func main() {
 
 	if len(host) == 0 {
 		hostString = fmt.Sprintf("127.0.0.1:%s", port)
-
 	} else if host == "0.0.0.0" {
 		hostString = fmt.Sprintf(":%s", port)
-
 	} else {
 		hostString = fmt.Sprintf("%s:%s", host, port)
 	}
@@ -98,8 +96,11 @@ func main() {
 	authGroup.Post("/refresh", routes.LocalRefresh)
 	authGroup.Post("/logout/:id", middleware.CheckUserAuthentication, routes.LocalLogoutById)
 	authGroup.Post("/logout", middleware.CheckUserAuthentication, routes.LocalLogout)
-	authGroup.Post("/password_reset", routes.LocalUnauthenticatedPasswordReset)
-	authGroup.Post("/password_reset/token", routes.LocalUnauthenticatedPasswordTokenIssuer)
+	authGroup.Post("/password_reset", middleware.CheckUserAuthentication, routes.LocalAuthenticatedPasswordReset)
+	authGroup.Post("/password_reset/token", middleware.CheckUserAuthentication, routes.LocalAuthenticatedPasswordTokenIssuer)
+	authGroup.Post("/forgot_password", routes.LocalUnauthenticatedPasswordReset)
+	authGroup.Post("/forgot_password/token", routes.LocalUnauthenticatedPasswordTokenIssuer)
+	authGroup.Post("/forgot_password/token/introspect", routes.LocalUnauthenticatedPasswordResetTokenIntrospect)
 	authGroup.Get("/@me", middleware.CheckUserAuthentication, routes.UserInfoGET)
 	authGroup.Patch("/@me", middleware.CheckUserAuthentication, routes.UserInfoPATCH)
 	authGroup.Delete("/@me", middleware.CheckUserAuthentication, routes.UserInfoDELETE)

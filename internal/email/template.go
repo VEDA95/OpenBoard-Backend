@@ -65,10 +65,14 @@ func InitializeEmailTemplateStore() error {
 	if err != nil {
 		return err
 	}
-	
+
 	MailTemplateStore = &TemplateStore{templates: templateFiles}
 
 	return nil
+}
+
+func (templateStore *TemplateStore) GetTemplates() map[string]string {
+	return templateStore.templates
 }
 
 func (templateStore *TemplateStore) GetTemplate(name string) string {
@@ -76,7 +80,13 @@ func (templateStore *TemplateStore) GetTemplate(name string) string {
 		return ""
 	}
 
-	return templateStore.templates[name]
+	templateString, ok := templateStore.templates[name]
+
+	if !ok {
+		return ""
+	}
+
+	return templateString
 }
 
 func (templateStore *TemplateStore) SetTemplate(name string, content string) {
@@ -101,9 +111,8 @@ func (templateStore *TemplateStore) RenderTemplate(name string, variables interf
 	}
 
 	buffer := new(bytes.Buffer)
-	err2 := templateInstance.Execute(buffer, variables)
 
-	if err2 != nil {
+	if err := templateInstance.Execute(buffer, variables); err != nil {
 		return ""
 	}
 

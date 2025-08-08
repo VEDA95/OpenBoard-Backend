@@ -24,6 +24,7 @@ env/.env.development
 
 .idea
 .vscode
-deployment/dev/data
+deployment/dev/data/
 build/
 air.log
+node_modules

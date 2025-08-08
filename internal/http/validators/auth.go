@@ -9,7 +9,7 @@ type LocalLoginValidator struct {
 
 type CreateUserValidator struct {
 	Username  string    `json:"username" validate:"required,min=1"`
-	Email     string    `json:"email_address" validate:"required,email"`
+	Email     string    `json:"email" validate:"required,email"`
 	Password  string    `json:"password" validate:"required,min=8,max=32"`
 	FirstName *string   `json:"first_name,omitempty" validate:"omitempty,min=1"`
 	LastName  *string   `json:"last_name,omitempty" validate:"omitempty,min=1"`
@@ -18,7 +18,7 @@ type CreateUserValidator struct {
 
 type UpdateUserValidator struct {
 	Username  *string   `json:"username,omitempty" validate:"omitempty,min=1"`
-	Email     *string   `json:"email_address,omitempty" validate:"omitempty,email"`
+	Email     *string   `json:"email,omitempty" validate:"omitempty,email"`
 	FirstName *string   `json:"first_name,omitempty" validate:"omitempty,min=1"`
 	LastName  *string   `json:"last_name,omitempty" validate:"omitempty,min=1"`
 	Roles     *[]string `json:"roles,omitempty" validate:"omitempty"`
@@ -28,8 +28,16 @@ type ResetPasswordUserLookupValidator struct {
 	Email string `json:"email" validate:"required,email"`
 }
 
+type AuthenticatedPasswordResetValidator struct {
+	Password string `json:"password" validate:"required,min=8"`
+}
+
+type ResetPasswordTokenIntrospectValidator struct {
+	Token string `json:"token" validate:"required,len=6"`
+}
+
 type ResetPasswordValidator struct {
-	Token           string `json:"token" validate:"required,min=1"`
+	Token           string `json:"token" validate:"required,len=6"`
 	NewPassword     string `json:"new_password" validate:"required,min=8,max=32"`
 	ConfirmPassword string `json:"confirm_password" validate:"required,eqfield=NewPassword"`
 }
