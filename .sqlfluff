@@ -1,0 +1,6 @@
+[sqlfluff]
+dialect = postgres
+
+[sqlfluff:rules]
+exclude_rules = L031,L034
+
