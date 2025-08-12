@@ -2,6 +2,7 @@ CREATE TABLE open_board_workspace (
     id UUID PRIMARY KEY DEFAULT (uuid_generate_v4()),
     date_created TIMESTAMP NOT NULL DEFAULT (now()),
     date_updated TIMESTAMP,
+    user_id UUID NOT NULL,
     name VARCHAR(255) NOT NULL,
     description TEXT
 );
@@ -55,6 +56,7 @@ CREATE TABLE open_board_board_permissions (
     PRIMARY KEY (board_id, permission_id)
 );
 
+ALTER TABLE open_board_workspace ADD FOREIGN KEY (user_id) REFERENCES open_board_user (id) ON DELETE CASCADE;
 ALTER TABLE open_board_board ADD FOREIGN KEY (workspace_id) REFERENCES open_board_workspace (id) ON DELETE CASCADE;
 ALTER TABLE open_board_board ADD FOREIGN KEY (user_id) REFERENCES open_board_user (id) ON DELETE CASCADE;
 ALTER TABLE open_board_board_list ADD FOREIGN KEY (board_id) REFERENCES open_board_board (id) ON DELETE CASCADE;
