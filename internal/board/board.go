@@ -4,6 +4,8 @@ import (
 	"VEDA95/open_board/api/internal/auth"
 	"VEDA95/open_board/api/internal/db"
 	"errors"
+	"maps"
+	"slices"
 	"time"
 
 	"github.com/gofrs/uuid/v5"
@@ -146,7 +148,47 @@ func GetWorkspaces() ([]Workspace, error) {
 	return workspaces, nil
 }
 
-func GetWorkspace(ID string) *Workspace {}
+func GetWorkspace(ID string) (*Workspace, error) {
+	if db.Instance == nil {
+		return nil, errors.New("Database not initialized")
+	}
+
+	workspaceQuery := WorkspaceQuery()
+	workspace := new(Workspace)
+
+	workspaceQuery.Where(workspaceQuery.Equal("id", ID))
+
+	if err := db.Instance.One(workspaceQuery, workspace); err != nil {
+		return nil, err
+	}
+
+	workspaceRows := make([]map[string]any, 0)
+	userRows := make([]map[string]any, 0)
+	workspacePermissionQuery := sqlbuilder.Select(
+		"open_board_role_permission.id AS permission_id",
+		"open_board_role_permission.path AS permission_path",
+	).From("open_board_workspace_permissions")
+	usersRolesQuery := auth.UsersRolesQuery()
+
+	usersRolesQuery.Where(usersRolesQuery.Equal("open_board_user_roles.user_id", workspace.User.Id))
+	workspacePermissionQuery.
+		Join("open_board_workspace", "open_board_workspace_permissions.workspace_id = open_board_workspace.id").
+		JoinWithOption(sqlbuilder.LeftJoin, "open_board_role_permission", "open_board_workspace_permissions.permission_id = open_board_role_permission.id").
+		Where(workspacePermissionQuery.Equal("open_board_workspace_permissions.workspace_id", ID))
+
+	if err := db.Instance.Many(workspacePermissionQuery, workspaceRows); err != nil {
+		return nil, err
+	}
+
+	if err := db.Instance.Many(usersRolesQuery, userRows); err != nil {
+		return nil, err
+	}
+
+	auth.AppendRolesToUser(userRows, workspace.User)
+	AppendPermissionsToWorkspace(workspaceRows, workspace)
+
+	return workspace, nil
+}
 
 func GetBoards() []Board {}
 
@@ -166,7 +208,7 @@ func AppendPermissionsToWorkspaces(rows []map[string]any, workspaces *[]Workspac
 		}
 	}
 
-	for index := range workspaces {
+	for index := range *workspaces {
 		permissions := make([]auth.RolePermission, 0)
 
 		for _, row := range rows {
@@ -179,4 +221,19 @@ func AppendPermissionsToWorkspaces(rows []map[string]any, workspaces *[]Workspac
 	}
 }
 
-func AppendPermissionToWorkspace(rows []map[string]any, workspace *Workspace) {}
+func AppendPermissionsToWorkspace(rows []map[string]any, workspace *Workspace) {
+	permissionMap := make(map[string]auth.RolePermission)
+
+	for _, row := range rows {
+		permissionId := row["permission_id"].(uuid.UUID).String()
+
+		if _, ok := permissionMap[permissionId]; !ok {
+			permissionMap[permissionId] = auth.RolePermission{
+				Id:   permissionId,
+				Path: row["permission_path"].(string),
+			}
+		}
+	}
+
+	workspace.Permissions = append(workspace.Permissions, slices.Collect(maps.Values(permissionMap))...)
+}
