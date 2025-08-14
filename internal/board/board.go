@@ -18,11 +18,6 @@ var BoardColumns = []string{
 	"open_board_board.date_updated AS board_date_updated",
 	"open_board_board.name AS board_name",
 	"open_board_board.is_public AS board_is_public",
-	"open_board_workspace.id AS workspace_id",
-	"open_board_workspace.date_created AS workspace_date_created",
-	"open_board_workspace.date_updated AS workspace_date_updated",
-	"open_board_workspace.name AS workspace_name",
-	"open_board_workspace.description AS workspace_description",
 	"open_board_user.id",
 	"open_board_user.date_created",
 	"open_board_user.date_updated",
@@ -42,6 +37,7 @@ var WorkspaceColumns = []string{
 	"open_board_workspace.date_updated AS workspace_date_updated",
 	"open_board_workspace.name AS workspace_name",
 	"open_board_workspace.description AS workspace_description",
+	"open_board_workspace.is_public AS workspace_is_public",
 	"open_board_user.id",
 	"open_board_user.date_created",
 	"open_board_user.date_updated",
@@ -58,20 +54,21 @@ var WorkspaceColumns = []string{
 type Workspace struct {
 	ID          string                `db:"workspace_id"`
 	Name        string                `db:"workspace_name"`
+	IsPublic    bool                  `db:"workspace_is_public"`
 	DateCreated time.Time             `db:"workspace_date_created"`
 	DateUpdated *time.Time            `db:"workspace_date_updated,omitempty"`
 	Description *string               `db:"workspace_description,omitempty"`
 	Permissions []auth.RolePermission `db:"-"`
+	Boards      []Board               `db:"-"`
 	User        *auth.User            `db:""`
 }
 
 type Board struct {
-	ID          string     `db:"id"`
-	Name        string     `db:"name"`
-	DateCreated time.Time  `db:"date_created"`
-	DateUpdated *time.Time `db:"date_updated,omitempty"`
-	IsPublic    bool       `db:"is_public"`
-	Workspace   *Workspace `db:""`
+	ID          string     `db:"board_id"`
+	Name        string     `db:"board_name"`
+	DateCreated time.Time  `db:"board_date_created"`
+	DateUpdated *time.Time `db:"board_date_updated,omitempty"`
+	IsPublic    bool       `db:"board_is_public"`
 	User        *auth.User `db:""`
 }
 
@@ -84,7 +81,6 @@ func WorkspaceQuery() *sqlbuilder.SelectBuilder {
 func BoardsQuery() *sqlbuilder.SelectBuilder {
 	return sqlbuilder.Select(BoardColumns...).
 		From("open_board_board").
-		Join("open_board_workspace", "open_board_board.workspace_id = open_board_workspace.id").
 		Join("open_board_user", "open_board_board.user_id = open_board_user.id")
 }
 
@@ -117,13 +113,15 @@ func GetWorkspaces() ([]*Workspace, error) {
 		users[index] = workspace.User
 	}
 
-	workspaceRows := make([]map[string]any, 0)
+	workspacePermissionRows := make([]map[string]any, 0)
+	workspaceBoardRows := make([]map[string]any, 0)
 	userRows := make([]map[string]any, 0)
 	workspacePermissionQuery := sqlbuilder.Select(
 		"open_board_workspace.id AS workspace_id",
 		"open_board_role_permission.id AS permission_id",
 		"open_board_role_permission.path AS permission_path",
 	).From("open_board_workspace_permissions")
+	workspaceBoardRowsQuery := BoardsQuery()
 	usersRolesQuery := sqlbuilder.Select(
 		"open_board_user_roles.user_id",
 		"open_board_role.id AS role_identifier",
@@ -132,6 +130,7 @@ func GetWorkspaces() ([]*Workspace, error) {
 		"open_board_role_permission.path AS permission_path",
 	).From("open_board_user_roles")
 
+	workspaceBoardRowsQuery.Where(workspaceBoardRowsQuery.In("open_board_board.workspace_id", workspaceIds...))
 	usersRolesQuery.
 		Join("open_board_role", "open_board_user_roles.role_id = open_board_role.id").
 		JoinWithOption(sqlbuilder.LeftJoin, "open_board_role_permissions", "open_board_role.id = open_board_role_permissions.role_id").
@@ -141,7 +140,11 @@ func GetWorkspaces() ([]*Workspace, error) {
 		Join("open_board_workspace", "open_board_workspace_permissions.workspace_id = open_board_workspace.id").
 		JoinWithOption(sqlbuilder.LeftJoin, "open_board_role_permission", "open_board_workspace_permissions.permission_id = open_board_role_permission.id")
 
-	if err := db.Instance.Many(workspacePermissionQuery, workspaceRows); err != nil {
+	if err := db.Instance.Many(workspaceBoardRowsQuery, workspaceBoardRows); err != nil {
+		return nil, err
+	}
+
+	if err := db.Instance.Many(workspacePermissionQuery, workspacePermissionRows); err != nil {
 		return nil, err
 	}
 
@@ -150,7 +153,7 @@ func GetWorkspaces() ([]*Workspace, error) {
 	}
 
 	auth.AppendRolesToUsers(userRows, &users)
-	AppendPermissionsToWorkspaces(workspaceRows, workspaces)
+	AppendPermissionsToWorkspaces(workspacePermissionRows, workspaces)
 
 	return workspaces, nil
 }
@@ -387,4 +390,45 @@ func AppendPermissionsToWorkspace(rows []map[string]any, workspace *Workspace) {
 	}
 
 	workspace.Permissions = append(workspace.Permissions, slices.Collect(maps.Values(permissionMap))...)
+}
+
+func AppendBoardsToWorkspaces(rows []map[string]any, workspaces []*Workspace) {
+	boardMap := make(map[string]Board)
+
+	for _, row := range rows {
+		boardId := row["board_id"].(uuid.UUID).String()
+
+		if _, ok := boardMap[boardId]; !ok {
+			dateCreated, err := time.Parse(time.DateTime, row["board_date_created"].(string))
+			if err != nil {
+				return
+			}
+
+			dateUpdated, err := time.Parse(time.DateTime, row["board_date_updated"].(string))
+			if err != nil {
+				return
+			}
+
+			boardMap[boardId] = Board{
+				ID:          boardId,
+				Name:        row["board_name"].(string),
+				DateCreated: dateCreated,
+				DateUpdated: &dateUpdated,
+				IsPublic:    row["is_public"].(bool),
+				User:        row["user"].(*auth.User),
+			}
+		}
+	}
+
+	for index := range workspaces {
+		boards := make([]Board, 0)
+
+		for _, row := range rows {
+			if row["workspace_id"].(uuid.UUID).String() == workspaces[index].ID {
+				boards = append(boards, boardMap[row["board_id"].(uuid.UUID).String()])
+			}
+		}
+
+		workspaces[index].Boards = boards
+	}
 }
