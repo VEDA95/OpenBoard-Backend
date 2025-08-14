@@ -4,6 +4,7 @@ CREATE TABLE open_board_workspace (
     date_updated TIMESTAMP,
     user_id UUID NOT NULL,
     name VARCHAR(255) NOT NULL,
+    is_public BOOLEAN NOT NULL DEFAULT (TRUE),
     description TEXT
 );
 
