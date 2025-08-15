@@ -1,125 +1,70 @@
 package db
 
 import (
-	"VEDA95/open_board/api/internal/log"
-	"context"
+	applogger "VEDA95/open_board/api/internal/log"
 	"errors"
-	"github.com/georgysavva/scany/v2/pgxscan"
-	"github.com/huandu/go-sqlbuilder"
-	pgxuuid "github.com/jackc/pgx-gofrs-uuid"
-	zerologadapter "github.com/jackc/pgx-zerolog"
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/jackc/pgx/v5/tracelog"
-	"github.com/rs/zerolog"
 	"os"
+	"reflect"
+	"time"
+
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
-type DB struct {
-	db      *pgxpool.Pool
-	context context.Context
-}
+var Instance *gorm.DB
 
-var Instance *DB
+func InitializeDB(models []any) error {
+	dsn := os.Getenv("DATABASE_URL")
 
-func CreateDBInstance(dbUrl string, logger zerolog.Logger) (*DB, error) {
-	connConfig, err := pgxpool.ParseConfig(dbUrl)
-
-	if err != nil {
-		return nil, err
+	if len(dsn) == 0 {
+		return errors.New("DATABASE_URL not set")
 	}
 
-	connConfig.ConnConfig.Tracer = &tracelog.TraceLog{
-		Logger:   zerologadapter.NewLogger(logger),
-		LogLevel: tracelog.LogLevelDebug,
-	}
-	connConfig.AfterConnect = func(ctx context.Context, connection *pgx.Conn) error {
-		pgxuuid.Register(connection.TypeMap())
-		return nil
-	}
-	dbContext := context.Background()
-	db, err := pgxpool.NewWithConfig(dbContext, connConfig)
-
-	if err != nil {
-		return nil, err
+	if reflect.ValueOf(applogger.Logger).IsZero() {
+		return errors.New("logger not set")
 	}
 
-	return &DB{db: db, context: dbContext}, nil
-}
+	gormLogger := NewGormZerologger(&applogger.Logger)
 
-func InitializeDBInstance() error {
-	dbUrl := os.Getenv("DATABASE_URL")
-
-	if len(dbUrl) == 0 {
-		return errors.New("DB_URL has not been set")
+	var logLevel logger.LogLevel
+	if os.Getenv("ENV_TYPE") == "production" {
+		logLevel = logger.Error
+	} else {
+		logLevel = logger.Info
 	}
 
-	instance, err := CreateDBInstance(dbUrl, log.Logger)
-
+	instacne, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
+		Logger: gormLogger.LogMode(logLevel),
+		NowFunc: func() time.Time {
+			return time.Now().UTC()
+		},
+		SkipDefaultTransaction: true,
+	})
 	if err != nil {
 		return err
 	}
 
-	Instance = instance
+	Instance = instacne
 
-	return nil
-}
-
-func (store *DB) One(builder sqlbuilder.Builder, output interface{}) error {
-	query, args := builder.BuildWithFlavor(sqlbuilder.PostgreSQL)
-	rows, err := store.db.Query(store.context, query, args...)
-
+	sqlDB, err := Instance.DB()
 	if err != nil {
 		return err
 	}
 
-	if err := pgxscan.ScanOne(output, rows); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil
+	sqlDB.SetMaxIdleConns(10)
+	sqlDB.SetMaxOpenConns(100)
+	sqlDB.SetConnMaxLifetime(time.Hour)
+
+	if os.Getenv("ENV") == "development" {
+		if err := AutoMigrate(models); err != nil {
+			return err
 		}
-
-		return err
 	}
 
 	return nil
 }
 
-func (store *DB) Many(builder sqlbuilder.Builder, output interface{}) error {
-	query, args := builder.BuildWithFlavor(sqlbuilder.PostgreSQL)
-	rows, err := store.db.Query(store.context, query, args...)
-
-	if err != nil {
-		return err
-	}
-
-	if err := pgxscan.ScanAll(output, rows); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (store *DB) Exec(builder sqlbuilder.Builder) error {
-	query, args := builder.BuildWithFlavor(sqlbuilder.PostgreSQL)
-	_, err := store.db.Exec(store.context, query, args...)
-
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (store *DB) Close() {
-	store.db.Close()
-}
-
-func (store *DB) Begin() (*Transaction, error) {
-	tx, err := store.db.Begin(store.context)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return &Transaction{tx: tx, context: context.Background()}, nil
+func AutoMigrate(models []any) error {
+	return Instance.AutoMigrate(models...)
 }

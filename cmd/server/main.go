@@ -36,7 +36,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if err := db.InitializeDBInstance(); err != nil {
+	models := []any{}
+
+	if err := db.InitializeDB(models); err != nil {
 		log.Fatal(err)
 	}
 
@@ -56,7 +58,6 @@ func main() {
 		log.Print("WARN:", err)
 	}
 
-	defer db.Instance.Close()
 	validators.InitializeValidatorInstance()
 
 	port := os.Getenv("PORT")
