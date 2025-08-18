@@ -4,6 +4,7 @@ import (
 	models "VEDA95/open_board/api/internal/db/model"
 	"VEDA95/open_board/api/internal/db/repository"
 	"VEDA95/open_board/api/internal/http/validators"
+	"errors"
 	"time"
 )
 
@@ -66,14 +67,31 @@ func (userService *UserService) GetUserByEmail(email string) (*models.User, erro
 }
 
 func (userService *UserService) CreateUser(data *validators.CreateUserValidator) (*models.User, error) {
-	user := new(models.User)
-	err := user.HashPassword(data.Password)
+	existingUserByUsername, err := userService.userRepo.FindByUsername(data.Username)
 	if err != nil {
 		return nil, err
 	}
 
+	if existingUserByUsername != nil {
+		return nil, errors.New("username already exists")
+	}
+
+	existingUserByEmail, err := userService.userRepo.FindByEmail(data.Email)
+	if err != nil {
+		return nil, err
+	}
+
+	if existingUserByEmail != nil {
+		return nil, errors.New("user with the provided email already exists")
+	}
+
+	user := new(models.User)
 	user.Username = data.Username
 	user.Email = data.Email
+
+	if err := user.HashPassword(data.Password); err != nil {
+		return nil, err
+	}
 
 	if data.FirstName == nil {
 		user.FirstName = data.FirstName
