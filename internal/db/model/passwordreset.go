@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/gofrs/uuid/v5"
+	"github.com/pquerna/otp/totp"
 	"gorm.io/gorm"
 )
 
@@ -24,4 +25,29 @@ func (resetToken *PasswordResetToken) BeforeCreate(tx *gorm.DB) error {
 
 	resetToken.ID = id.String()
 	return nil
+}
+
+func (passwordResetToken *PasswordResetToken) GenerateToken(email string) error {
+	now := time.Now()
+	key, err := totp.Generate(totp.GenerateOpts{
+		Issuer:      "open_board",
+		AccountName: email,
+	})
+	if err != nil {
+		return err
+	}
+
+	token, err := totp.GenerateCode(key.Secret(), now)
+	if err != nil {
+		return err
+	}
+
+	passwordResetToken.Token = token
+	passwordResetToken.ExpiresOn = now.Add(time.Minute * 15)
+
+	return nil
+}
+
+func (passwordResetToken *PasswordResetToken) IsValid() bool {
+	return time.Now().Before(passwordResetToken.ExpiresOn)
 }

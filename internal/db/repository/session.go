@@ -30,8 +30,8 @@ func (sessionRepo *SessionRepository) FindAll() ([]*models.Session, error) {
 	return sessions, nil
 }
 
-func (sessionRepo *SessionRepository) FindByUser(ID string) ([]*models.User, error) {
-	sessions := make([]*models.User, 0)
+func (sessionRepo *SessionRepository) FindByUser(ID string) ([]*models.Session, error) {
+	sessions := make([]*models.Session, 0)
 
 	if err := sessionRepo.db.Where("user_id = ?", ID).Find(&sessions).Error; err != nil {
 		return nil, err
@@ -80,4 +80,8 @@ func (sessionRepo *SessionRepository) Update(session *models.Session) error {
 
 func (sessionRepo *SessionRepository) Delete(ID string) error {
 	return sessionRepo.db.Delete(&models.Session{}, ID).Error
+}
+
+func (sessionRepo *SessionRepository) DeleteByUserID(ID string) error {
+	return sessionRepo.db.Where("user_id = ?", ID).Delete(&models.Session{}).Error
 }

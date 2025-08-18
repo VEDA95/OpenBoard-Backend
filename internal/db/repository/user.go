@@ -39,6 +39,16 @@ func (userRepo *UserRepository) FindByID(ID string) (*models.User, error) {
 	return user, nil
 }
 
+func (userRepo *UserRepository) FindByUsername(username string) (*models.User, error) {
+	user := new(models.User)
+
+	if err := userRepo.db.First(user, "username = ?", username).Error; err != nil {
+		return nil, err
+	}
+
+	return user, nil
+}
+
 func (userRepo *UserRepository) FindByEmail(email string) (*models.User, error) {
 	user := new(models.User)
 
@@ -53,8 +63,48 @@ func (userRepo *UserRepository) Create(user *models.User) error {
 	return userRepo.db.Create(user).Error
 }
 
+func (userRepo *UserRepository) CreateWithRoles(user *models.User, roleIDs ...string) error {
+	return userRepo.db.Transaction(func(transaction *gorm.DB) error {
+		roles := make([]*models.Role, 0)
+
+		if err := transaction.Where("id IN ?", roleIDs).Find(&roles).Error; err != nil {
+			return err
+		}
+
+		if err := transaction.Create(user).Error; err != nil {
+			return err
+		}
+
+		return transaction.Model(user).Association("Roles").Append(roles)
+	})
+}
+
 func (userRepo *UserRepository) Update(user *models.User) error {
 	return userRepo.db.Save(user).Error
+}
+
+func (userRepo *UserRepository) UpdateWithRoles(user *models.User, roleIDs ...string) error {
+	return userRepo.db.Transaction(func(transaction *gorm.DB) error {
+		roles := make([]*models.Role, 0)
+
+		if err := transaction.Save(user).Error; err != nil {
+			return err
+		}
+
+		if err := transaction.Model(user).Association("Roles").Clear(); err != nil {
+			return err
+		}
+
+		if len(roleIDs) == 0 {
+			return nil
+		}
+
+		if err := transaction.Where("id IN ?", roleIDs).Find(&roles).Error; err != nil {
+			return err
+		}
+
+		return transaction.Model(user).Association("Roles").Append(roles)
+	})
 }
 
 func (userRepo *UserRepository) Delete(ID string) error {

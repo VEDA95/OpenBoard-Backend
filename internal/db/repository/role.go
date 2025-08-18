@@ -40,6 +40,16 @@ func (roleRepo *RoleRepository) FindByID(ID string) (*models.Role, error) {
 	return role, nil
 }
 
+func (roleRepo *RoleRepository) FindByIDs(IDs ...string) ([]*models.Role, error) {
+	roles := make([]*models.Role, 0)
+
+	if err := roleRepo.db.Where("id IN ?", IDs).Find(&roles).Error; err != nil {
+		return nil, err
+	}
+
+	return roles, nil
+}
+
 func (roleRepo *RoleRepository) FindByName(name string) (*models.Role, error) {
 	role := new(models.Role)
 
