@@ -64,8 +64,47 @@ func (roleRepo *RoleRepository) Create(role *models.Role) error {
 	return roleRepo.db.Create(role).Error
 }
 
+func (roleRepo *RoleRepository) CreateWithPermissions(role *models.Role, permissionIDs ...string) error {
+	return roleRepo.db.Transaction(func(transaction *gorm.DB) error {
+		permissions := make([]*models.Permission, 0)
+
+		if err := transaction.Where("id IN ?", permissionIDs).Find(&permissions).Error; err != nil {
+			return err
+		}
+
+		if err := transaction.Create(role).Error; err != nil {
+			return err
+		}
+
+		return transaction.Model(role).Association("Permissions").Append(permissions)
+	})
+}
+
 func (roleRepo *RoleRepository) Update(role *models.Role) error {
 	return roleRepo.db.Save(role).Error
+}
+
+func (roleRepo *RoleRepository) UpdateWithPermissions(role *models.Role, permissionsIDs ...string) error {
+	return roleRepo.db.Transaction(func(transaction *gorm.DB) error {
+		if err := transaction.Save(role); err != nil {
+			return nil
+		}
+
+		if err := transaction.Model(role).Association("Permissions").Clear(); err != nil {
+			return err
+		}
+
+		if len(permissionsIDs) == 0 {
+			return nil
+		}
+
+		permissions := make([]*models.Permission, 0)
+		if err := transaction.Where("id IN ?", permissionsIDs).Find(&permissions).Error; err != nil {
+			return err
+		}
+
+		return transaction.Model(role).Association("Permissions").Append(permissions)
+	})
 }
 
 func (roleRepo *RoleRepository) Delete(ID string) error {
