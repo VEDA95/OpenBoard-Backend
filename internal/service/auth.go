@@ -16,27 +16,12 @@ type AuthService struct {
 	passwordResetRepo *repository.PasswordResetRepository
 }
 
-func NewSessionService() (*AuthService, error) {
-	sessionRepo, err := repository.NewSessionRepository()
-	if err != nil {
-		return nil, err
-	}
-
-	userRepo, err := repository.NewUserRepository()
-	if err != nil {
-		return nil, err
-	}
-
-	passwordResetRepo, err := repository.NewPasswordResetRepository()
-	if err != nil {
-		return nil, err
-	}
-
+func NewSessionService(sessionRepo *repository.SessionRepository, userRepo *repository.UserRepository, passwordResetRepo *repository.PasswordResetRepository) *AuthService {
 	return &AuthService{
 		userRepo:          userRepo,
 		sessionRepo:       sessionRepo,
 		passwordResetRepo: passwordResetRepo,
-	}, nil
+	}
 }
 
 func (authService *AuthService) GetUserSessions(ID string) ([]*models.Session, error) {

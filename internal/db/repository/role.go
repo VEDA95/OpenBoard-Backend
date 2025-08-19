@@ -1,9 +1,7 @@
 package repository
 
 import (
-	"VEDA95/open_board/api/internal/db"
 	models "VEDA95/open_board/api/internal/db/model"
-	"errors"
 
 	"gorm.io/gorm"
 )
@@ -12,12 +10,8 @@ type RoleRepository struct {
 	db *gorm.DB
 }
 
-func NewRoleRepository() (*RoleRepository, error) {
-	if db.Instance == nil {
-		return nil, errors.New("database not initialized")
-	}
-
-	return &RoleRepository{db: db.Instance}, nil
+func NewRoleRepository(db *gorm.DB) *RoleRepository {
+	return &RoleRepository{db: db}
 }
 
 func (roleRepo *RoleRepository) FindAll() ([]*models.Role, error) {

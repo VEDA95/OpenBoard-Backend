@@ -1,9 +1,7 @@
 package repository
 
 import (
-	"VEDA95/open_board/api/internal/db"
 	models "VEDA95/open_board/api/internal/db/model"
-	"errors"
 
 	"gorm.io/gorm"
 )
@@ -12,12 +10,8 @@ type UserRepository struct {
 	db *gorm.DB
 }
 
-func NewUserRepository() (*UserRepository, error) {
-	if db.Instance == nil {
-		return nil, errors.New("database instance not initialized")
-	}
-
-	return &UserRepository{db: db.Instance}, nil
+func NewUserRepository(db *gorm.DB) *UserRepository {
+	return &UserRepository{db: db}
 }
 
 func (userRepo *UserRepository) FindAll() ([]*models.User, error) {

@@ -1,9 +1,7 @@
 package repository
 
 import (
-	"VEDA95/open_board/api/internal/db"
 	models "VEDA95/open_board/api/internal/db/model"
-	"errors"
 
 	"gorm.io/gorm"
 )
@@ -12,12 +10,8 @@ type SessionRepository struct {
 	db *gorm.DB
 }
 
-func NewSessionRepository() (*SessionRepository, error) {
-	if db.Instance == nil {
-		return nil, errors.New("database not initialized")
-	}
-
-	return &SessionRepository{db: db.Instance}, nil
+func NewSessionRepository(db *gorm.DB) *SessionRepository {
+	return &SessionRepository{db: db}
 }
 
 func (sessionRepo *SessionRepository) FindAll() ([]*models.Session, error) {

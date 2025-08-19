@@ -1,9 +1,7 @@
 package repository
 
 import (
-	"VEDA95/open_board/api/internal/db"
 	models "VEDA95/open_board/api/internal/db/model"
-	"errors"
 
 	"gorm.io/gorm"
 )
@@ -12,12 +10,8 @@ type PasswordResetRepository struct {
 	db *gorm.DB
 }
 
-func NewPasswordResetRepository() (*PasswordResetRepository, error) {
-	if db.Instance == nil {
-		return nil, errors.New("database not initialized")
-	}
-
-	return &PasswordResetRepository{db: db.Instance}, nil
+func NewPasswordResetRepository(db *gorm.DB) *PasswordResetRepository {
+	return &PasswordResetRepository{db: db}
 }
 
 func (passwordResetRepo *PasswordResetRepository) FindAll() ([]*models.PasswordResetToken, error) {

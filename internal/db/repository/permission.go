@@ -1,9 +1,7 @@
 package repository
 
 import (
-	"VEDA95/open_board/api/internal/db"
 	models "VEDA95/open_board/api/internal/db/model"
-	"errors"
 
 	"gorm.io/gorm"
 )
@@ -12,12 +10,8 @@ type PermissionRepository struct {
 	db *gorm.DB
 }
 
-func NewPermissionRepository() (*PermissionRepository, error) {
-	if db.Instance == nil {
-		return nil, errors.New("database not initialized")
-	}
-
-	return &PermissionRepository{db: db.Instance}, nil
+func NewPermissionRepository(db *gorm.DB) *PermissionRepository {
+	return &PermissionRepository{db: db}
 }
 
 func (permissionRepo *PermissionRepository) FindAll() ([]*models.Permission, error) {

@@ -10,13 +10,8 @@ type PermissionService struct {
 	repo *repository.PermissionRepository
 }
 
-func NewPermissionService() (*PermissionService, error) {
-	permissionRepo, err := repository.NewPermissionRepository()
-	if err != nil {
-		return nil, err
-	}
-
-	return &PermissionService{repo: permissionRepo}, nil
+func NewPermissionService(permissionRepo *repository.PermissionRepository) *PermissionService {
+	return &PermissionService{repo: permissionRepo}
 }
 
 func (permissionService *PermissionService) GetPermissions() ([]*models.Permission, error) {

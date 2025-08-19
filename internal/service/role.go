@@ -10,13 +10,8 @@ type RoleService struct {
 	repo *repository.RoleRepository
 }
 
-func NewRoleService() (*RoleService, error) {
-	roleRepo, err := repository.NewRoleRepository()
-	if err != nil {
-		return nil, err
-	}
-
-	return &RoleService{repo: roleRepo}, nil
+func NewRoleService(roleRepo *repository.RoleRepository) *RoleService {
+	return &RoleService{repo: roleRepo}
 }
 
 func (roleService *RoleService) GetRoles() ([]*models.Role, error) {

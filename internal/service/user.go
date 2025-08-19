@@ -13,21 +13,11 @@ type UserService struct {
 	roleRepo *repository.RoleRepository
 }
 
-func NewUserService() (*UserService, error) {
-	userRepo, err := repository.NewUserRepository()
-	if err != nil {
-		return nil, err
-	}
-
-	roleRepo, err := repository.NewRoleRepository()
-	if err != nil {
-		return nil, err
-	}
-
+func NewUserService(userRepo *repository.UserRepository, roleRepo *repository.RoleRepository) *UserService {
 	return &UserService{
 		userRepo: userRepo,
 		roleRepo: roleRepo,
-	}, nil
+	}
 }
 
 func (userService *UserService) GetUsers() ([]*models.User, error) {
