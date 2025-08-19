@@ -12,17 +12,15 @@ import (
 	"gorm.io/gorm/logger"
 )
 
-var Instance *gorm.DB
-
-func InitializeDB(models []any) error {
+func NewDB(models []any) (*gorm.DB, error) {
 	dsn := os.Getenv("DATABASE_URL")
 
 	if len(dsn) == 0 {
-		return errors.New("DATABASE_URL not set")
+		return nil, errors.New("DATABASE_URL not set")
 	}
 
 	if reflect.ValueOf(applogger.Logger).IsZero() {
-		return errors.New("logger not set")
+		return nil, errors.New("logger not set")
 	}
 
 	gormLogger := NewGormZerologger(&applogger.Logger)
@@ -42,14 +40,12 @@ func InitializeDB(models []any) error {
 		SkipDefaultTransaction: true,
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	Instance = instacne
-
-	sqlDB, err := Instance.DB()
+	sqlDB, err := instacne.DB()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	sqlDB.SetMaxIdleConns(10)
@@ -57,14 +53,14 @@ func InitializeDB(models []any) error {
 	sqlDB.SetConnMaxLifetime(time.Hour)
 
 	if os.Getenv("ENV") == "development" {
-		if err := AutoMigrate(models); err != nil {
-			return err
+		if err := AutoMigrate(instacne, models); err != nil {
+			return nil, err
 		}
 	}
 
-	return nil
+	return instacne, nil
 }
 
-func AutoMigrate(models []any) error {
-	return Instance.AutoMigrate(models...)
+func AutoMigrate(dbInstance *gorm.DB, models []any) error {
+	return dbInstance.AutoMigrate(models...)
 }

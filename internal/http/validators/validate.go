@@ -1,19 +1,20 @@
 package validators
 
 import (
+	"reflect"
+	"strings"
+
 	"github.com/go-playground/locales/en"
 	ut "github.com/go-playground/universal-translator"
 	"github.com/go-playground/validator/v10"
 	enTranslations "github.com/go-playground/validator/v10/translations/en"
-	"reflect"
-	"strings"
 )
 
 type ErrorResponse struct {
-	FailedField string      `json:"failed_field"`
-	Tag         string      `json:"tag"`
-	Value       interface{} `json:"value"`
-	ErrValue    string      `json:"err_value"`
+	FailedField string `json:"failed_field"`
+	Tag         string `json:"tag"`
+	Value       any    `json:"value"`
+	ErrValue    string `json:"err_value"`
 }
 
 type Validator struct {
@@ -22,8 +23,6 @@ type Validator struct {
 }
 
 type ErrorResponseMap = map[string]*ErrorResponse
-
-var Instance *Validator
 
 func NewValidator() *Validator {
 	validate := validator.New()
@@ -124,10 +123,6 @@ func NewValidator() *Validator {
 	)
 
 	return &Validator{validator: validate, translator: trans}
-}
-
-func InitializeValidatorInstance() {
-	Instance = NewValidator()
 }
 
 func (validate *Validator) Validate(data interface{}) ErrorResponseMap {

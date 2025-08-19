@@ -4,12 +4,13 @@ import (
 	_ "VEDA95/open_board/api/docs"
 	"VEDA95/open_board/api/internal/config"
 	"VEDA95/open_board/api/internal/db"
-	"VEDA95/open_board/api/internal/email"
+	"VEDA95/open_board/api/internal/db/repository"
 	"VEDA95/open_board/api/internal/errors"
 	"VEDA95/open_board/api/internal/http/middleware"
 	"VEDA95/open_board/api/internal/http/routes"
 	"VEDA95/open_board/api/internal/http/validators"
 	applogger "VEDA95/open_board/api/internal/log"
+	"VEDA95/open_board/api/internal/service"
 	"fmt"
 	"log"
 	"os"
@@ -32,17 +33,24 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if err := applogger.InitializeLogger(); err != nil {
+	logger, err := applogger.NewLogger()
+	if err != nil {
 		log.Fatal(err)
 	}
 
 	models := []any{}
-
-	if err := db.InitializeDB(models); err != nil {
-		log.Fatal(err)
+	dbInstance, err := db.NewDB(models)
+	if err != nil {
+		logger.Fatal().Err(err).Msg("")
 	}
 
-	if err := email.InitializeEmailClient(); err != nil {
+	emailRepo, err := repository.NewEmailRepository(logger)
+	if err != nil {
+		logger.Fatal().Err(err).Msg("")
+	}
+
+	emailService, err := service.NewEmailService(emailRepo)
+	if err != nil {
 		if !strings.Contains(err.Error(), "required email settings are missing") {
 			log.Fatal(err)
 		}
@@ -50,20 +58,11 @@ func main() {
 		log.Print("WARN:", err)
 	}
 
-	if err := email.InitializeEmailTemplateStore(); err != nil {
-		if !strings.Contains(err.Error(), "mail client not initialized") {
-			log.Fatal(err)
-		}
-
-		log.Print("WARN:", err)
-	}
-
-	validators.InitializeValidatorInstance()
-
+	validator := validators.NewValidator()
 	port := os.Getenv("PORT")
 
 	if len(port) == 0 {
-		applogger.Logger.Fatal().Msg("environment variable PORT is not set")
+		logger.Fatal().Msg("environment variable PORT is not set")
 	}
 
 	host := os.Getenv("HOST")
@@ -85,7 +84,7 @@ func main() {
 	apiGroup := app.Group("/api")
 	authGroup := app.Group("/auth")
 
-	app.Use(fiberzerolog.New(fiberzerolog.Config{Logger: &applogger.Logger}))
+	app.Use(fiberzerolog.New(fiberzerolog.Config{Logger: logger}))
 	app.Use(cors.New(cors.Config{
 		AllowOrigins:     "http://localhost:3000",
 		AllowMethods:     "GET, POST, PUT, PATCH, DELETE",
@@ -124,6 +123,6 @@ func main() {
 	apiGroup.Delete("/users/:id", routes.UserDELETE)
 
 	if err := app.Listen(hostString); err != nil {
-		applogger.Logger.Fatal().Err(err).Msg("Error occurred while running the server")
+		logger.Fatal().Err(err).Msg("Error occurred while running the server")
 	}
 }

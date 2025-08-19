@@ -9,24 +9,22 @@ import (
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
-var Logger zerolog.Logger
-
-func InitializeLogger() error {
+func NewLogger() (*zerolog.Logger, error) {
 	if os.Getenv("ENV_TYPE") == "development" {
-		Logger = zerolog.New(os.Stdout).
+		logger := zerolog.New(os.Stdout).
 			Output(zerolog.ConsoleWriter{Out: os.Stdout}).
 			Level(zerolog.DebugLevel).
 			With().
 			Timestamp().
 			Logger()
 
-		return nil
+		return &logger, nil
 	}
 
 	logDirectory := os.Getenv("LOG_DIRECTORY")
 
 	if len(logDirectory) == 0 {
-		return errors.New("LOG_DIRECTORY is not set")
+		return nil, errors.New("LOG_DIRECTORY is not set")
 	}
 
 	rotationLogger := &lumberjack.Logger{
@@ -35,12 +33,12 @@ func InitializeLogger() error {
 		MaxBackups: 10,
 		MaxAge:     30,
 	}
-	Logger = zerolog.New(rotationLogger).
+	logger := zerolog.New(rotationLogger).
 		Output(zerolog.ConsoleWriter{Out: rotationLogger}).
 		Level(zerolog.ErrorLevel).
 		With().
 		Timestamp().
 		Logger()
 
-	return nil
+	return &logger, nil
 }
