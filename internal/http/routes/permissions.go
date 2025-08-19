@@ -2,14 +2,26 @@ package routes
 
 import (
 	"VEDA95/open_board/api/internal/auth"
-	"VEDA95/open_board/api/internal/db"
 	"VEDA95/open_board/api/internal/errors"
 	"VEDA95/open_board/api/internal/http/responses"
 	"VEDA95/open_board/api/internal/http/validators"
+	"VEDA95/open_board/api/internal/service"
 	"fmt"
+
 	"github.com/gofiber/fiber/v2"
-	"github.com/huandu/go-sqlbuilder"
 )
+
+type PermissionHandler struct {
+	service   *service.PermissionService
+	validator *validators.Validator
+}
+
+func NewPermissionHandler(permissionService *service.PermissionService, validator *validators.Validator) *PermissionHandler {
+	return &PermissionHandler{
+		service:   permissionService,
+		validator: validator,
+	}
+}
 
 // PermissionsGET godoc
 //
@@ -20,9 +32,8 @@ import (
 //	@Failure		500 {object} responses.ErrorResponse[responses.GenericMessage]
 //	@Router			/api/permissions [get]
 //	@Produce		json
-func PermissionsGET(context *fiber.Ctx) error {
-	permissions, err := auth.GetPermissions()
-
+func (permissionHandler *PermissionHandler) GET(context *fiber.Ctx) error {
+	permissions, err := permissionHandler.service.GetPermissions()
 	if err != nil {
 		return err
 	}
@@ -42,32 +53,26 @@ func PermissionsGET(context *fiber.Ctx) error {
 //	@Router			/api/permissions [post]
 //	@Accept			json
 //	@Produce		json
-func PermissionsPOST(context *fiber.Ctx) error {
+func (permissionHandler *PermissionHandler) POST(context *fiber.Ctx) error {
 	dataValidator := new(validators.CreatePermissionValidator)
 
 	if err := context.BodyParser(dataValidator); err != nil {
 		return err
 	}
 
-	if errs := validators.Instance.Validate(dataValidator); len(errs) > 0 {
+	if errs := permissionHandler.validator.Validate(dataValidator); len(errs) > 0 {
 		return errors.CreateValidationError(errs)
 	}
 
-	var output auth.Permission
-	createPermissionQuery := sqlbuilder.
-		InsertInto("open_board_role_permission").
-		Cols("path").
-		Values(dataValidator.Path).
-		Returning("*")
-
-	if err := db.Instance.One(createPermissionQuery, &output); err != nil {
+	permission, err := permissionHandler.service.CreatePermission(dataValidator)
+	if err != nil {
 		return err
 	}
 
 	return responses.JSONResponse(
 		context,
 		fiber.StatusOK,
-		responses.CreateSuccessResponse(fiber.StatusOK, fmt.Sprintf("permission: %s was created suucessfully", output.Id), output),
+		responses.CreateSuccessResponse(fiber.StatusOK, fmt.Sprintf("permission: %s was created suucessfully", permission.ID), permission),
 	)
 }
 
@@ -82,19 +87,18 @@ func PermissionsPOST(context *fiber.Ctx) error {
 //	@Failure		404,500 {object} responses.ErrorResponse[responses.GenericMessage]
 //	@Router			/api/permissions/{id} [get]
 //	@Produce		json
-func PermissionGET(context *fiber.Ctx) error {
+func (permissionHandler *PermissionHandler) GETByID(context *fiber.Ctx) error {
 	paramValidator := new(validators.ParamValidator)
 
 	if err := context.ParamsParser(paramValidator); err != nil {
 		return err
 	}
 
-	if errs := validators.Instance.Validate(paramValidator); len(errs) > 0 {
+	if errs := permissionHandler.validator.Validate(paramValidator); len(errs) > 0 {
 		return errors.CreateValidationError(errs)
 	}
 
-	permission, err := auth.GetPermission(paramValidator.Id)
-
+	permission, err := permissionHandler.service.GetPermission(paramValidator.Id)
 	if err != nil {
 		return err
 	}
@@ -115,19 +119,18 @@ func PermissionGET(context *fiber.Ctx) error {
 //	@Router			/api/permissions/{id} [patch]
 //	@Accept			json
 //	@Produce		json
-func PermissionPATCH(context *fiber.Ctx) error {
+func (permissionHandler *PermissionHandler) PATCH(context *fiber.Ctx) error {
 	paramValidator := new(validators.ParamValidator)
 
 	if err := context.ParamsParser(paramValidator); err != nil {
 		return err
 	}
 
-	if errs := validators.Instance.Validate(paramValidator); len(errs) > 0 {
+	if errs := permissionHandler.validator.Validate(paramValidator); len(errs) > 0 {
 		return errors.CreateValidationError(errs)
 	}
 
 	permission, err := auth.GetPermission(paramValidator.Id)
-
 	if err != nil {
 		return err
 	}
@@ -142,7 +145,7 @@ func PermissionPATCH(context *fiber.Ctx) error {
 		return err
 	}
 
-	if errs := validators.Instance.Validate(dataValidator); len(errs) > 0 {
+	if errs := permissionHandler.validator.Validate(dataValidator); len(errs) > 0 {
 		return errors.CreateValidationError(errs)
 	}
 
@@ -150,16 +153,8 @@ func PermissionPATCH(context *fiber.Ctx) error {
 		return responses.JSONResponse(context, fiber.StatusOK, responses.OKResponse(fiber.StatusOK, permission))
 	}
 
-	var updatedPermission auth.Permission
-	updatePermissionQuery := sqlbuilder.Update("open_board_role_permission")
-	updatePermissionQuery.
-		Where(updatePermissionQuery.Equal("id", permission.Id)).
-		Set(updatePermissionQuery.Assign("path", dataValidator.Path))
-	withPermissionQuery := sqlbuilder.With(
-		sqlbuilder.CTEQuery("role_permission_update").As(updatePermissionQuery),
-	).Select("*").From("open_board_role_permission")
-
-	if err := db.Instance.One(withPermissionQuery, &updatedPermission); err != nil {
+	updatedPermission, err := permissionHandler.service.UpdatePermission(paramValidator.Id, dataValidator)
+	if err != nil {
 		return err
 	}
 
@@ -168,7 +163,7 @@ func PermissionPATCH(context *fiber.Ctx) error {
 		fiber.StatusOK,
 		responses.CreateSuccessResponse(
 			fiber.StatusOK,
-			fmt.Sprintf("permission: %s was updated sucessfully", updatedPermission.Id),
+			fmt.Sprintf("permission: %s was updated sucessfully", updatedPermission.ID),
 			updatedPermission,
 		),
 	)
@@ -185,19 +180,18 @@ func PermissionPATCH(context *fiber.Ctx) error {
 //	@Failure		404,500 {object} responses.ErrorResponse[responses.GenericMessage]
 //	@Router			/api/permissions/{id} [delete]
 //	@Produce		json
-func PermissionDELETE(context *fiber.Ctx) error {
+func (permissionHandler *PermissionHandler) DELETE(context *fiber.Ctx) error {
 	paramValidator := new(validators.ParamValidator)
 
 	if err := context.ParamsParser(paramValidator); err != nil {
 		return err
 	}
 
-	if errs := validators.Instance.Validate(paramValidator); len(errs) > 0 {
+	if errs := permissionHandler.validator.Validate(paramValidator); len(errs) > 0 {
 		return errors.CreateValidationError(errs)
 	}
 
-	permission, err := auth.GetPermission(paramValidator.Id)
-
+	permission, err := permissionHandler.service.GetPermission(paramValidator.Id)
 	if err != nil {
 		return err
 	}
@@ -206,10 +200,7 @@ func PermissionDELETE(context *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusNotFound, "permission not found")
 	}
 
-	deletePermissionQuery := sqlbuilder.DeleteFrom("open_board_role_permission")
-	deletePermissionQuery.Where(deletePermissionQuery.Equal("id", permission.Id))
-
-	if err := db.Instance.Exec(deletePermissionQuery); err != nil {
+	if err := permissionHandler.service.DeletePermission(permission.ID); err != nil {
 		return err
 	}
 
@@ -217,7 +208,7 @@ func PermissionDELETE(context *fiber.Ctx) error {
 		context,
 		fiber.StatusOK,
 		responses.OKResponse(fiber.StatusOK, responses.GenericMessage{
-			Message: fmt.Sprintf("permission: %s was deleted sucessfully", permission.Id),
+			Message: fmt.Sprintf("permission: %s was deleted sucessfully", permission.ID),
 		}),
 	)
 }
