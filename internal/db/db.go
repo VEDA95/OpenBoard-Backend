@@ -1,29 +1,24 @@
 package db
 
 import (
-	applogger "VEDA95/open_board/api/internal/log"
 	"errors"
 	"os"
-	"reflect"
 	"time"
 
+	"github.com/rs/zerolog"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
 
-func NewDB(models []any) (*gorm.DB, error) {
+func NewDB(appLogger *zerolog.Logger, models []any) (*gorm.DB, error) {
 	dsn := os.Getenv("DATABASE_URL")
 
 	if len(dsn) == 0 {
 		return nil, errors.New("DATABASE_URL not set")
 	}
 
-	if reflect.ValueOf(applogger.Logger).IsZero() {
-		return nil, errors.New("logger not set")
-	}
-
-	gormLogger := NewGormZerologger(&applogger.Logger)
+	gormLogger := NewGormZerologger(appLogger)
 
 	var logLevel logger.LogLevel
 	if os.Getenv("ENV_TYPE") == "production" {

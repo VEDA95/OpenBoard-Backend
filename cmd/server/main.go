@@ -39,7 +39,7 @@ func main() {
 	}
 
 	models := []any{}
-	dbInstance, err := db.NewDB(models)
+	dbInstance, err := db.NewDB(logger, models)
 	if err != nil {
 		logger.Fatal().Err(err).Msg("")
 	}
