@@ -15,6 +15,7 @@ type PasswordResetToken struct {
 	Type      string    `gorm:"type:varchar(16);not null" json:"type"`
 	Token     string    `gorm:"type:varchar(6);not null" json:"token"`
 	UserID    string    `gorm:"type:uuid;not null" json:"user_id"`
+	User      User      `gorm:"foreignKey:UserID" json:"user"`
 }
 
 func (resetToken *PasswordResetToken) BeforeCreate(tx *gorm.DB) error {

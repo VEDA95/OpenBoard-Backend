@@ -18,7 +18,8 @@ type Session struct {
 	IPAddress        string         `gorm:"type:varchar(255);not null" json:"ip_address"`
 	UserAgent        string         `gorm:"type:varchar(255);not null" json:"user_agent"`
 	AdditionalInfo   datatypes.JSON `gorm:"type:jsonb" json:"additional_info"`
-	UserID           string         `gorm:"type:uuid;not null" json:"user_id"`
+	UserID           string         `gorm:"type:uuid;not null" json:"-"`
+	User             *User          `gorm:"foreignKey:UserID" json:"user"`
 }
 
 func (session *Session) GenerateTokens() error {
