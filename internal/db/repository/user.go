@@ -14,39 +14,40 @@ func NewUserRepository(db *gorm.DB) *UserRepository {
 	return &UserRepository{db: db}
 }
 
-func (userRepo *UserRepository) FindAll() ([]*models.User, error) {
+func (userRepo *UserRepository) FindAll(options QueryOptions) ([]*models.User, error) {
 	users := make([]*models.User, 0)
 
-	if err := userRepo.db.Find(&users).Error; err != nil {
+	if err := options.AppendToQuery(userRepo.db).Find(&users).Error; err != nil {
 		return nil, err
 	}
+
 	return users, nil
 }
 
-func (userRepo *UserRepository) FindByID(ID string) (*models.User, error) {
+func (userRepo *UserRepository) FindByID(ID string, options QueryOptions) (*models.User, error) {
 	user := new(models.User)
 
-	if err := userRepo.db.First(user, ID).Error; err != nil {
+	if err := options.AppendToQuery(userRepo.db).First(user, ID).Error; err != nil {
 		return nil, err
 	}
 
 	return user, nil
 }
 
-func (userRepo *UserRepository) FindByUsername(username string) (*models.User, error) {
+func (userRepo *UserRepository) FindByUsername(username string, options QueryOptions) (*models.User, error) {
 	user := new(models.User)
 
-	if err := userRepo.db.First(user, "username = ?", username).Error; err != nil {
+	if err := options.AppendToQuery(userRepo.db).Where("username = ?", username).First(user).Error; err != nil {
 		return nil, err
 	}
 
 	return user, nil
 }
 
-func (userRepo *UserRepository) FindByEmail(email string) (*models.User, error) {
+func (userRepo *UserRepository) FindByEmail(email string, options QueryOptions) (*models.User, error) {
 	user := new(models.User)
 
-	if err := userRepo.db.First(user, "email = ?", email).Error; err != nil {
+	if err := options.AppendToQuery(userRepo.db).Where("email = ?", email).First(user).Error; err != nil {
 		return nil, err
 	}
 
@@ -85,10 +86,6 @@ func (userRepo *UserRepository) UpdateWithRoles(user *models.User, roleIDs ...st
 			return err
 		}
 
-		if err := transaction.Model(user).Association("Roles").Clear(); err != nil {
-			return err
-		}
-
 		if len(roleIDs) == 0 {
 			return nil
 		}
@@ -97,7 +94,7 @@ func (userRepo *UserRepository) UpdateWithRoles(user *models.User, roleIDs ...st
 			return err
 		}
 
-		return transaction.Model(user).Association("Roles").Append(roles)
+		return transaction.Model(user).Association("Roles").Replace(roles)
 	})
 }
 
