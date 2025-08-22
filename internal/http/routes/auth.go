@@ -8,6 +8,7 @@ import (
 	"VEDA95/open_board/api/internal/http/responses"
 	"VEDA95/open_board/api/internal/http/validators"
 	"VEDA95/open_board/api/internal/log"
+	"VEDA95/open_board/api/internal/service"
 	genericError "errors"
 	"fmt"
 	"os"
@@ -21,6 +22,27 @@ import (
 	"github.com/wneessen/go-mail"
 )
 
+type AuthHandler struct {
+	authService  *service.AuthService
+	userService  *service.UserService
+	emailService *service.EmailService
+	validator    *validators.Validator
+}
+
+func NewAuthHandler(
+	authService *service.AuthService,
+	userService *service.UserService,
+	emailService *service.EmailService,
+	validator *validators.Validator,
+) *AuthHandler {
+	return &AuthHandler{
+		authService:  authService,
+		userService:  userService,
+		emailService: emailService,
+		validator:    validator,
+	}
+}
+
 // LocalLogin godoc
 //
 //		@Description	Handles local login process for users
@@ -33,100 +55,19 @@ import (
 //		@Router			/auth/login [post]
 //		@Accept			json
 //		@Produce		json
-func LocalLogin(context *fiber.Ctx) error {
-	expiresInEnv := os.Getenv("AUTH_SESSION_EXPIRES_IN")
-	refreshExpiresInEnv := os.Getenv("AUTH_SESSION_REFRESH_EXPIRES_IN")
-
-	if len(expiresInEnv) == 0 || len(refreshExpiresInEnv) == 0 {
-		return genericError.New("AUTH_SESSION_EXPIRES_IN and/or AUTH_SESSION_REFRESH_EXPIRES_IN environment variable(s) was not set")
-	}
-
-	expiresIn, err := strconv.Atoi(expiresInEnv)
-	if err != nil {
-		return err
-	}
-
-	refreshExpiresIn, err := strconv.Atoi(refreshExpiresInEnv)
-	if err != nil {
-		return err
-	}
-
+func (authHandler *AuthHandler) LocalLogin(context *fiber.Ctx) error {
 	dataValidator := new(validators.LocalLoginValidator)
 
 	if err := context.BodyParser(dataValidator); err != nil {
 		return err
 	}
 
-	if errs := validators.Instance.Validate(dataValidator); len(errs) > 0 {
+	if errs := authHandler.validator.Validate(dataValidator); len(errs) > 0 {
 		return errors.CreateValidationError(errs)
 	}
 
-	userQuery := auth.UsersQuery()
-	userQuery.Where(userQuery.Equal("username", dataValidator.Username))
-	user := new(auth.User)
-
-	if err := db.Instance.One(userQuery, user); err != nil {
-		return err
-	}
-
-	if user == nil {
-		return fiber.NewError(fiber.StatusNotFound, "user not found")
-	}
-
-	if !auth.CheckPasswordHash(dataValidator.Password, user.HashedPassword) {
-		return fiber.NewError(fiber.StatusUnauthorized, "unauthorized")
-	}
-
-	token, err := auth.CreateSessionToken()
+	authData, err := authHandler.authService.LocalLogin(dataValidator, context.Get("User-Agent"), context.IP())
 	if err != nil {
-		return err
-	}
-
-	now := time.Now().Local()
-	queryColumns := []string{"user_id", "expires_on", "session_type", "access_token", "ip_address", "user_agent"}
-	queryValues := []interface{}{
-		user.Id,
-		now.Add(time.Second * time.Duration(expiresIn)),
-		"local",
-		token,
-		context.IP(),
-		context.Get("User-Agent"),
-	}
-
-	if dataValidator.Remember {
-		refreshToken, err := auth.CreateSessionToken()
-		if err != nil {
-			return err
-		}
-
-		queryColumns = append(queryColumns, "refresh_expires_on", "refresh_token")
-		queryValues = append(
-			queryValues,
-			now.Add(time.Second*time.Duration(refreshExpiresIn)),
-			refreshToken,
-		)
-	}
-
-	transaction, err := db.Instance.Begin()
-	if err != nil {
-		return err
-	}
-
-	sessionQuery := sqlbuilder.InsertInto("open_board_user_session").Cols(queryColumns...).Values(queryValues...)
-	updateUserQuery := sqlbuilder.Update("open_board_user")
-	updateUserQuery.
-		Where(updateUserQuery.Equal("id", user.Id)).
-		Set(updateUserQuery.Assign("last_login", now))
-
-	if err := transaction.Exec(sessionQuery); err != nil {
-		return err
-	}
-
-	if err := transaction.Exec(updateUserQuery); err != nil {
-		return err
-	}
-
-	if err := transaction.Commit(); err != nil {
 		return err
 	}
 
@@ -134,8 +75,8 @@ func LocalLogin(context *fiber.Ctx) error {
 		context.Status(fiber.StatusCreated)
 		context.Cookie(&fiber.Cookie{
 			Name:     "open_board_session",
-			Value:    token,
-			Expires:  queryValues[1].(time.Time),
+			Value:    authData.AccessToken,
+			Expires:  authData.ExpiresOn,
 			HTTPOnly: true,
 			Secure:   false,
 			Path:     "/",
@@ -145,8 +86,8 @@ func LocalLogin(context *fiber.Ctx) error {
 		if dataValidator.Remember {
 			context.Cookie(&fiber.Cookie{
 				Name:     "open_board_session_remember_me",
-				Value:    queryValues[len(queryValues)-1].(string),
-				Expires:  queryValues[len(queryValues)-2].(time.Time),
+				Value:    *authData.RefreshToken,
+				Expires:  *authData.RefreshExpiresOn,
 				HTTPOnly: true,
 				Secure:   false,
 				Path:     "/",
@@ -157,27 +98,14 @@ func LocalLogin(context *fiber.Ctx) error {
 		return nil
 	}
 
-	rows := make([]map[string]interface{}, 0)
-	userRolesQuery := auth.UsersRolesQuery()
-	userRolesQuery.Where(userRolesQuery.Equal("open_board_user_roles.user_id", user.Id))
-
-	if err := db.Instance.Many(userRolesQuery, &rows); err != nil {
-		return err
-	}
-
-	auth.AppendRolesToUser(rows, user)
-
-	user.LastLogin = &now
 	responseData := auth.LocalUserLogin{
-		User:        user,
-		AccessToken: token,
-		ExpiresIn:   expiresIn,
+		AccessToken: authData.AccessToken,
+		ExpiresIn:   authData.ExpiresOn,
 	}
 
 	if dataValidator.Remember {
-		refreshToken := queryValues[len(queryValues)-1].(string)
-		responseData.RefreshExpiresIn = &refreshExpiresIn
-		responseData.RefreshToken = &refreshToken
+		responseData.RefreshExpiresIn = authData.RefreshExpiresOn
+		responseData.RefreshToken = authData.RefreshToken
 	}
 
 	return responses.JSONResponse(
