@@ -177,7 +177,7 @@ func (roleHandler *RoleHandler) PATCH(context *fiber.Ctx) error {
 //	@Router			/api/roles/{id} [delete]
 //	@Accept			json
 //	@Produce		json
-func (roleHandler *RoleHandler) Delete(context *fiber.Ctx) error {
+func (roleHandler *RoleHandler) DELETE(context *fiber.Ctx) error {
 	paramValidator := new(validators.ParamValidator)
 
 	if err := context.ParamsParser(paramValidator); err != nil {
