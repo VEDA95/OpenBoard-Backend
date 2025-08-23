@@ -46,8 +46,18 @@ func (authService *AuthService) ValidateSession(token string) (*models.Session, 
 		return nil, err
 	}
 
-	if !session.IsValid() {
+	isRefreshValid := session.IsRefreshValid()
+
+	if !session.IsValid() && !isRefreshValid {
+		if err := authService.sessionRepo.Delete(session.ID); err != nil {
+			return nil, err
+		}
+
 		return nil, errors.New("invalid credentials")
+	}
+
+	if isRefreshValid {
+		return session, errors.New("refresh required")
 	}
 
 	return session, nil
