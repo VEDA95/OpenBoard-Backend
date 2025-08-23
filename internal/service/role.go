@@ -15,7 +15,9 @@ func NewRoleService(roleRepo *repository.RoleRepository) *RoleService {
 }
 
 func (roleService *RoleService) GetRoles() ([]*models.Role, error) {
-	roles, err := roleService.repo.FindAll()
+	roles, err := roleService.repo.FindAll(repository.QueryOptions{
+		Preload: []string{"Permissions"},
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -24,7 +26,9 @@ func (roleService *RoleService) GetRoles() ([]*models.Role, error) {
 }
 
 func (roleService *RoleService) GetRole(ID string) (*models.Role, error) {
-	role, err := roleService.repo.FindByID(ID)
+	role, err := roleService.repo.FindByID(ID, repository.QueryOptions{
+		Preload: []string{"Permissions"},
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -36,14 +40,23 @@ func (roleService *RoleService) CreateRole(data *validators.CreateRoleValidator)
 	role := &models.Role{Name: data.Name}
 
 	if data.Permissions != nil && len(*data.Permissions) > 0 {
-		if err := roleService.repo.CreateWithPermissions(role, *data.Permissions...); err != nil {
+		err := roleService.repo.CreateWithPermissions(
+			role,
+			*data.Permissions,
+			repository.QueryOptions{Omit: []string{"Permissions"}},
+			repository.QueryOptions{},
+		)
+		if err != nil {
 			return nil, err
 		}
 
 		return role, nil
 	}
 
-	if err := roleService.repo.Create(role); err != nil {
+	err := roleService.repo.Create(role, repository.QueryOptions{
+		Omit: []string{"Permissions"},
+	})
+	if err != nil {
 		return nil, err
 	}
 
@@ -51,7 +64,9 @@ func (roleService *RoleService) CreateRole(data *validators.CreateRoleValidator)
 }
 
 func (roleService *RoleService) UpdateRole(ID string, data *validators.UpdateRoleValidator) (*models.Role, error) {
-	role, err := roleService.repo.FindByID(ID)
+	role, err := roleService.repo.FindByID(ID, repository.QueryOptions{
+		Omit: []string{"Permissions"},
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -61,15 +76,26 @@ func (roleService *RoleService) UpdateRole(ID string, data *validators.UpdateRol
 	}
 
 	if data.Permissions != nil {
-		if err := roleService.repo.UpdateWithPermissions(role, *data.Permissions...); err != nil {
+		err := roleService.repo.UpdateWithPermissions(
+			role,
+			*data.Permissions,
+			repository.QueryOptions{
+				Omit: []string{"Permissions"},
+			},
+			repository.QueryOptions{},
+		)
+		if err != nil {
 			return nil, err
 		}
 
 		return role, nil
 	}
 
-	if err := roleService.repo.Update(role); err != nil {
-		return nil, err
+	err2 := roleService.repo.Update(role, repository.QueryOptions{
+		Omit: []string{"Permissions"},
+	})
+	if err2 != nil {
+		return nil, err2
 	}
 
 	return role, nil
