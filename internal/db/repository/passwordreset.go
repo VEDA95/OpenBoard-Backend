@@ -14,42 +14,42 @@ func NewPasswordResetRepository(db *gorm.DB) *PasswordResetRepository {
 	return &PasswordResetRepository{db: db}
 }
 
-func (passwordResetRepo *PasswordResetRepository) FindAll() ([]*models.PasswordResetToken, error) {
+func (passwordResetRepo *PasswordResetRepository) FindAll(options QueryOptions) ([]*models.PasswordResetToken, error) {
 	passwordResetTokens := make([]*models.PasswordResetToken, 0)
 
-	if err := passwordResetRepo.db.Find(passwordResetTokens).Error; err != nil {
+	if err := options.AppendToQuery(passwordResetRepo.db).Find(passwordResetTokens).Error; err != nil {
 		return nil, err
 	}
 
 	return passwordResetTokens, nil
 }
 
-func (passwordResetRepo *PasswordResetRepository) FindByID(ID string) (*models.PasswordResetToken, error) {
+func (passwordResetRepo *PasswordResetRepository) FindByID(ID string, options QueryOptions) (*models.PasswordResetToken, error) {
 	passwordResetToken := new(models.PasswordResetToken)
 
-	if err := passwordResetRepo.db.First(passwordResetToken, ID).Error; err != nil {
+	if err := options.AppendToQuery(passwordResetRepo.db).First(passwordResetToken, ID).Error; err != nil {
 		return nil, err
 	}
 
 	return passwordResetToken, nil
 }
 
-func (passwordResetRepo *PasswordResetRepository) FindByToken(token string) (*models.PasswordResetToken, error) {
+func (passwordResetRepo *PasswordResetRepository) FindByToken(token string, options QueryOptions) (*models.PasswordResetToken, error) {
 	passwordResetToken := new(models.PasswordResetToken)
 
-	if err := passwordResetRepo.db.Where("token = ?", token).First(passwordResetToken).Error; err != nil {
+	if err := options.AppendToQuery(passwordResetRepo.db).Where("token = ?", token).First(passwordResetToken).Error; err != nil {
 		return nil, err
 	}
 
 	return passwordResetToken, nil
 }
 
-func (passwordResetRepo *PasswordResetRepository) Create(passwordResetToken *models.PasswordResetToken) error {
-	return passwordResetRepo.db.Create(passwordResetToken).Error
+func (passwordResetRepo *PasswordResetRepository) Create(passwordResetToken *models.PasswordResetToken, options QueryOptions) error {
+	return options.AppendToQuery(passwordResetRepo.db).Create(passwordResetToken).Error
 }
 
-func (passwordResetRepo *PasswordResetRepository) Update(passwordResetToken *models.PasswordResetToken) error {
-	return passwordResetRepo.db.Save(passwordResetToken).Error
+func (passwordResetRepo *PasswordResetRepository) Update(passwordResetToken *models.PasswordResetToken, options QueryOptions) error {
+	return options.AppendToQuery(passwordResetRepo.db).Save(passwordResetToken).Error
 }
 
 func (passwordResetRepo *PasswordResetRepository) Delete(ID string) error {

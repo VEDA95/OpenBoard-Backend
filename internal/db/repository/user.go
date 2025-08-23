@@ -54,19 +54,19 @@ func (userRepo *UserRepository) FindByEmail(email string, options QueryOptions) 
 	return user, nil
 }
 
-func (userRepo *UserRepository) Create(user *models.User) error {
-	return userRepo.db.Create(user).Error
+func (userRepo *UserRepository) Create(user *models.User, options QueryOptions) error {
+	return options.AppendToQuery(userRepo.db).Create(user).Error
 }
 
-func (userRepo *UserRepository) CreateWithRoles(user *models.User, roleIDs ...string) error {
+func (userRepo *UserRepository) CreateWithRoles(user *models.User, roleIDs []string, userOptions QueryOptions, roleOptions QueryOptions) error {
 	return userRepo.db.Transaction(func(transaction *gorm.DB) error {
 		roles := make([]*models.Role, 0)
 
-		if err := transaction.Where("id IN ?", roleIDs).Find(&roles).Error; err != nil {
+		if err := roleOptions.AppendToQuery(transaction).Where("id IN ?", roleIDs).Find(&roles).Error; err != nil {
 			return err
 		}
 
-		if err := transaction.Create(user).Error; err != nil {
+		if err := userOptions.AppendToQuery(transaction).Create(user).Error; err != nil {
 			return err
 		}
 
@@ -74,15 +74,15 @@ func (userRepo *UserRepository) CreateWithRoles(user *models.User, roleIDs ...st
 	})
 }
 
-func (userRepo *UserRepository) Update(user *models.User) error {
-	return userRepo.db.Save(user).Error
+func (userRepo *UserRepository) Update(user *models.User, options QueryOptions) error {
+	return options.AppendToQuery(userRepo.db).Save(user).Error
 }
 
-func (userRepo *UserRepository) UpdateWithRoles(user *models.User, roleIDs ...string) error {
+func (userRepo *UserRepository) UpdateWithRoles(user *models.User, roleIDs []string, userOptions QueryOptions, roleOptions QueryOptions) error {
 	return userRepo.db.Transaction(func(transaction *gorm.DB) error {
 		roles := make([]*models.Role, 0)
 
-		if err := transaction.Save(user).Error; err != nil {
+		if err := userOptions.AppendToQuery(transaction).Save(user).Error; err != nil {
 			return err
 		}
 
@@ -90,7 +90,7 @@ func (userRepo *UserRepository) UpdateWithRoles(user *models.User, roleIDs ...st
 			return nil
 		}
 
-		if err := transaction.Where("id IN ?", roleIDs).Find(&roles).Error; err != nil {
+		if err := roleOptions.AppendToQuery(transaction).Where("id IN ?", roleIDs).Find(&roles).Error; err != nil {
 			return err
 		}
 
