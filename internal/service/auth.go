@@ -17,7 +17,7 @@ type AuthService struct {
 	passwordResetRepo *repository.PasswordResetRepository
 }
 
-func NewSessionService(sessionRepo *repository.SessionRepository, userRepo *repository.UserRepository, passwordResetRepo *repository.PasswordResetRepository) *AuthService {
+func NewAuthService(sessionRepo *repository.SessionRepository, userRepo *repository.UserRepository, passwordResetRepo *repository.PasswordResetRepository) *AuthService {
 	return &AuthService{
 		userRepo:          userRepo,
 		sessionRepo:       sessionRepo,
