@@ -2,24 +2,15 @@ package routes
 
 import (
 	"VEDA95/open_board/api/internal/auth"
-	"VEDA95/open_board/api/internal/db"
-	"VEDA95/open_board/api/internal/email"
+	models "VEDA95/open_board/api/internal/db/model"
 	"VEDA95/open_board/api/internal/errors"
 	"VEDA95/open_board/api/internal/http/responses"
 	"VEDA95/open_board/api/internal/http/validators"
-	"VEDA95/open_board/api/internal/log"
 	"VEDA95/open_board/api/internal/service"
-	genericError "errors"
 	"fmt"
-	"os"
-	"strconv"
 	"strings"
-	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/huandu/go-sqlbuilder"
-	"github.com/pquerna/otp/totp"
-	"github.com/wneessen/go-mail"
 )
 
 type AuthHandler struct {
@@ -75,8 +66,8 @@ func (authHandler *AuthHandler) LocalLogin(context *fiber.Ctx) error {
 		context.Status(fiber.StatusCreated)
 		context.Cookie(&fiber.Cookie{
 			Name:     "open_board_session",
-			Value:    authData.AccessToken,
-			Expires:  authData.ExpiresOn,
+			Value:    authData.Session.AccessToken,
+			Expires:  authData.Session.ExpiresOn,
 			HTTPOnly: true,
 			Secure:   false,
 			Path:     "/",
@@ -86,8 +77,8 @@ func (authHandler *AuthHandler) LocalLogin(context *fiber.Ctx) error {
 		if dataValidator.Remember {
 			context.Cookie(&fiber.Cookie{
 				Name:     "open_board_session_remember_me",
-				Value:    *authData.RefreshToken,
-				Expires:  *authData.RefreshExpiresOn,
+				Value:    *authData.Session.RefreshToken,
+				Expires:  *authData.Session.RefreshExpiresOn,
 				HTTPOnly: true,
 				Secure:   false,
 				Path:     "/",
@@ -99,13 +90,14 @@ func (authHandler *AuthHandler) LocalLogin(context *fiber.Ctx) error {
 	}
 
 	responseData := auth.LocalUserLogin{
-		AccessToken: authData.AccessToken,
-		ExpiresIn:   authData.ExpiresOn,
+		AccessToken: authData.Session.AccessToken,
+		ExpiresIn:   authData.ExpiresIn,
+		User:        authData.Session.User,
 	}
 
 	if dataValidator.Remember {
-		responseData.RefreshExpiresIn = authData.RefreshExpiresOn
-		responseData.RefreshToken = authData.RefreshToken
+		responseData.RefreshExpiresIn = authData.RefreshExpiresIn
+		responseData.RefreshToken = authData.Session.RefreshToken
 	}
 
 	return responses.JSONResponse(
@@ -113,7 +105,7 @@ func (authHandler *AuthHandler) LocalLogin(context *fiber.Ctx) error {
 		fiber.StatusCreated,
 		responses.CreateSuccessResponse(
 			fiber.StatusCreated,
-			fmt.Sprintf("%s has been successfully logged in", user.Username),
+			fmt.Sprintf("%s has been successfully logged in", authData.Session.User.Username),
 			responseData,
 		),
 	)
@@ -131,30 +123,23 @@ func (authHandler *AuthHandler) LocalLogin(context *fiber.Ctx) error {
 //		@Router			/auth/logout [post]
 //		@Accept			json
 //		@Produce		json
-func LocalLogout(context *fiber.Ctx) error {
+func (authHandler *AuthHandler) LocalLogout(context *fiber.Ctx) error {
 	logoutValidator := new(validators.LocalLogoutBodyValidator)
 
 	if err := context.BodyParser(logoutValidator); err != nil {
 		return err
 	}
 
-	if errs := validators.Instance.Validate(logoutValidator); len(errs) > 0 {
+	if errs := authHandler.validator.Validate(logoutValidator); len(errs) > 0 {
 		return errors.CreateValidationError(errs)
 	}
 
-	log.Logger.Debug().Interface("body", logoutValidator).Msg("LocalLogout")
-
-	session := context.Locals("auth_session").(auth.UserSession)
-	deleteSessionQuery := sqlbuilder.DeleteFrom("open_board_user_session")
+	session := context.Locals("auth_session").(models.Session)
 
 	if logoutValidator.All {
-		deleteSessionQuery.Where(deleteSessionQuery.Equal("user_id", session.User.Id))
+		authHandler.authService.LocalLogoutByUserID(session.User.ID)
 	} else {
-		deleteSessionQuery.Where(deleteSessionQuery.Equal("id", session.Id))
-	}
-
-	if err := db.Instance.Exec(deleteSessionQuery); err != nil {
-		return err
+		authHandler.authService.LocalLogout(session.AccessToken)
 	}
 
 	if !logoutValidator.All && logoutValidator.ReturnType == "session" {
@@ -190,14 +175,14 @@ func LocalLogout(context *fiber.Ctx) error {
 //		@Router			/auth/logout/{id} [post]
 //		@Accept			json
 //		@Produce		json
-func LocalLogoutById(context *fiber.Ctx) error {
+func (authHandler *AuthHandler) LocalLogoutById(context *fiber.Ctx) error {
 	paramValidator := new(validators.ParamValidator)
 
 	if err := context.ParamsParser(paramValidator); err != nil {
 		return err
 	}
 
-	if errs := validators.Instance.Validate(paramValidator); len(errs) > 0 {
+	if errs := authHandler.validator.Validate(paramValidator); len(errs) > 0 {
 		return errors.CreateValidationError(errs)
 	}
 
@@ -207,24 +192,17 @@ func LocalLogoutById(context *fiber.Ctx) error {
 		return err
 	}
 
-	if errs := validators.Instance.Validate(logoutValidator); len(errs) > 0 {
+	if errs := authHandler.validator.Validate(logoutValidator); len(errs) > 0 {
 		return errors.CreateValidationError(errs)
 	}
 
-	log.Logger.Debug().Interface("body", logoutValidator).Msg("LocalLogout")
+	session := context.Locals("auth_session").(models.Session)
 
-	session := context.Locals("auth_session").(auth.UserSession)
-	deleteSessionQuery := sqlbuilder.DeleteFrom("open_board_user_session")
-	deleteSessionQuery.Where(
-		deleteSessionQuery.Equal("id", paramValidator.Id),
-		deleteSessionQuery.Equal("user_id", session.User.Id),
-	)
-
-	if err := db.Instance.Exec(deleteSessionQuery); err != nil {
+	if err := authHandler.authService.LocalLogoutByID(paramValidator.Id); err != nil {
 		return err
 	}
 
-	if (paramValidator.Id == session.Id) && logoutValidator.ReturnType == "session" {
+	if (paramValidator.Id == session.ID) && logoutValidator.ReturnType == "session" {
 		context.Status(fiber.StatusOK)
 		context.ClearCookie("open_board_session")
 
@@ -256,30 +234,14 @@ func LocalLogoutById(context *fiber.Ctx) error {
 //		@Router			/auth/refresh [post]
 //		@Accept			json
 //		@Produce		json
-func LocalRefresh(context *fiber.Ctx) error {
-	expiresInEnv := os.Getenv("AUTH_SESSION_EXPIRES_IN")
-	refreshExpiresInEnv := os.Getenv("AUTH_SESSION_REFRESH_EXPIRES_IN")
-
-	if len(expiresInEnv) == 0 || len(refreshExpiresInEnv) == 0 {
-		return genericError.New("AUTH_SESSION_EXPIRES_IN and/or AUTH_SESSION_REFRESH_EXPIRES_IN environment variable(s) was not set")
-	}
-
-	expiresIn, err := strconv.Atoi(expiresInEnv)
-	if err != nil {
-		return err
-	}
-
-	refreshExpiresIn, err := strconv.Atoi(refreshExpiresInEnv)
-	if err != nil {
-		return err
-	}
-
+func (authHandler *AuthHandler) LocalRefresh(context *fiber.Ctx) error {
 	returnValidator := new(validators.ReturnValidator)
 
 	if err := context.BodyParser(returnValidator); err != nil {
 		return err
 	}
-	if errs := validators.Instance.Validate(returnValidator); len(errs) > 0 {
+
+	if errs := authHandler.validator.Validate(returnValidator); len(errs) > 0 {
 		return errors.CreateValidationError(errs)
 	}
 
@@ -301,61 +263,9 @@ func LocalRefresh(context *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusUnauthorized, "unauthorized")
 	}
 
-	var session auth.UserSession
-	now := time.Now().Local()
 	authToken := authHeaderSplit[1]
-	sessionQuery := auth.GetSessionQuery()
-	sessionQuery.Where(sessionQuery.Equal("refresh_token", authToken))
-
-	if err := db.Instance.One(sessionQuery, &session); err != nil {
-		return err
-	}
-	if len(session.Id) == 0 {
-		return fiber.NewError(fiber.StatusNotFound, "token not found")
-	}
-	if session.RefreshExpiresOn == nil {
-		return fiber.NewError(fiber.StatusUnauthorized, "unauthorized")
-	}
-
-	if now.After(*session.RefreshExpiresOn) {
-		deleteSessionQuery := sqlbuilder.DeleteFrom("open_board_user_session")
-		deleteSessionQuery.Where(deleteSessionQuery.Equal("id", session.Id))
-
-		if err := db.Instance.Exec(deleteSessionQuery); err != nil {
-			return err
-		}
-
-		if returnValidator.ReturnType == "session" {
-			context.ClearCookie("open_board_session", "open_board_session_remember_me")
-		}
-
-		return fiber.NewError(fiber.StatusUnauthorized, "unauthorized")
-	}
-
-	accessToken, err := auth.CreateSessionToken()
+	authData, err := authHandler.authService.LocalRefresh(authToken)
 	if err != nil {
-		return err
-	}
-
-	refreshToken, err := auth.CreateSessionToken()
-	if err != nil {
-		return err
-	}
-
-	expiresOn := now.Add(time.Second * time.Duration(expiresIn))
-	refreshExpiresOn := now.Add(time.Second * time.Duration(refreshExpiresIn))
-	updateSessionQuery := sqlbuilder.Update("open_board_user_session")
-	updateSessionQuery.
-		Where(updateSessionQuery.Equal("id", session.Id)).
-		Set(
-			updateSessionQuery.Assign("date_updated", now),
-			updateSessionQuery.Assign("expires_on", expiresOn),
-			updateSessionQuery.Assign("refresh_expires_on", refreshExpiresOn),
-			updateSessionQuery.Assign("access_token", accessToken),
-			updateSessionQuery.Assign("refresh_token", refreshToken),
-		)
-
-	if err := db.Instance.Exec(updateSessionQuery); err != nil {
 		return err
 	}
 
@@ -363,8 +273,8 @@ func LocalRefresh(context *fiber.Ctx) error {
 		context.Status(fiber.StatusOK)
 		context.Cookie(&fiber.Cookie{
 			Name:     "open_board_session",
-			Value:    accessToken,
-			Expires:  expiresOn,
+			Value:    authData.Session.AccessToken,
+			Expires:  authData.Session.ExpiresOn,
 			HTTPOnly: true,
 			Secure:   false,
 			Path:     "/",
@@ -372,8 +282,8 @@ func LocalRefresh(context *fiber.Ctx) error {
 		})
 		context.Cookie(&fiber.Cookie{
 			Name:     "open_board_session_remember_me",
-			Value:    refreshToken,
-			Expires:  refreshExpiresOn,
+			Value:    *authData.Session.RefreshToken,
+			Expires:  *authData.Session.RefreshExpiresOn,
 			HTTPOnly: true,
 			Secure:   false,
 			Path:     "/",
@@ -383,95 +293,50 @@ func LocalRefresh(context *fiber.Ctx) error {
 		return nil
 	}
 
-	rows := make([]map[string]interface{}, 0)
-	usersRolesQuery := auth.UsersRolesQuery()
-	usersRolesQuery.Where(usersRolesQuery.Equal("open_board_user_roles.user_id", session.User.Id))
-
-	if err := db.Instance.Many(usersRolesQuery, &rows); err != nil {
-		return err
-	}
-
-	auth.AppendRolesToUser(rows, session.User)
-
 	return responses.JSONResponse(
 		context,
 		fiber.StatusOK,
 		responses.CreateSuccessResponse(
 			fiber.StatusOK,
-			fmt.Sprintf("%s auth session has been successfully refreshed", session.User.Username),
+			fmt.Sprintf("%s auth session has been successfully refreshed", authData.Session.User.Username),
 			auth.LocalUserLogin{
-				User:             session.User,
-				AccessToken:      accessToken,
-				RefreshToken:     &refreshToken,
-				ExpiresIn:        expiresIn,
-				RefreshExpiresIn: &refreshExpiresIn,
+				User:             authData.Session.User,
+				AccessToken:      authData.Session.AccessToken,
+				RefreshToken:     authData.Session.RefreshToken,
+				ExpiresIn:        authData.ExpiresIn,
+				RefreshExpiresIn: authData.RefreshExpiresIn,
 			},
 		),
 	)
 }
 
-func LocalUnauthenticatedPasswordTokenIssuer(context *fiber.Ctx) error {
+func (authHandler *AuthHandler) LocalUnauthenticatedPasswordTokenIssuer(context *fiber.Ctx) error {
 	validatorData := new(validators.ResetPasswordUserLookupValidator)
 
 	if err := context.BodyParser(validatorData); err != nil {
 		return err
 	}
-	if errs := validators.Instance.Validate(validatorData); errs != nil {
+
+	if errs := authHandler.validator.Validate(validatorData); errs != nil {
 		return errors.CreateValidationError(errs)
 	}
 
-	user := new(auth.User)
-	usersQuery := auth.UsersQuery()
-
-	usersQuery.Where(usersQuery.Equal("email", validatorData.Email))
-
-	if err := db.Instance.One(usersQuery, user); err != nil {
-		return err
-	}
-	if len(user.Id) == 0 {
-		return fiber.NewError(fiber.StatusNotFound, "user not found")
-	}
-
-	now := time.Now()
-	key, err := totp.Generate(totp.GenerateOpts{
-		Issuer:      "open_board",
-		AccountName: user.Email,
-	})
+	passwordResetToken, err := authHandler.authService.IssueForgotPasswordToken(validatorData.Email)
 	if err != nil {
-		return err
-	}
-
-	token, err := totp.GenerateCode(key.Secret(), now)
-	if err != nil {
-		return err
-	}
-
-	passwordResetQuery := sqlbuilder.InsertInto("open_board_password_reset_token").
-		Cols("expires_on", "type", "user_id", "token").
-		Values(now.Add(time.Minute*15), "form", user.Id, token)
-
-	if err := db.Instance.Exec(passwordResetQuery); err != nil {
 		return err
 	}
 
 	go func() {
-		if email.MailClient == nil {
-			log.Logger.Warn().Msg("email client is nil. Skipping sending email...")
-			return
-		}
-
-		err := email.MailClient.SendMessage(
+		authHandler.emailService.SendMessage(
 			"Open Board Password Reset",
-			user.Email,
-			mail.TypeTextHTML,
-			email.MailTemplateStore.RenderTemplate(
-				"password-reset",
-				auth.PasswordResetEmailVariables{Token: token, Email: user.Email, Username: user.Username},
-			),
+			passwordResetToken.User.Email,
+			"password-reset",
+			auth.PasswordResetEmailVariables{
+				Token:    passwordResetToken.Token,
+				Email:    passwordResetToken.User.Email,
+				Username: passwordResetToken.User.Username,
+			},
 		)
-		if err != nil {
-			log.Logger.Warn().Err(err).Msg("unable to send email")
-		}
 	}()
 
 	return responses.JSONResponse(
@@ -479,47 +344,25 @@ func LocalUnauthenticatedPasswordTokenIssuer(context *fiber.Ctx) error {
 		fiber.StatusOK,
 		responses.OKResponse(
 			fiber.StatusOK,
-			responses.GenericMessage{Message: "Please check your email to recover your password"},
+			responses.GenericMessage{Message: "Please check your email to reset your password"},
 		),
 	)
 }
 
-func LocalAuthenticatedPasswordTokenIssuer(context *fiber.Ctx) error {
+func (authHandler *AuthHandler) LocalAuthenticatedPasswordTokenIssuer(context *fiber.Ctx) error {
 	validatorData := new(validators.AuthenticatedPasswordResetValidator)
 
 	if err := context.BodyParser(validatorData); err != nil {
 		return err
 	}
 
-	if errs := validators.Instance.Validate(validatorData); errs != nil {
+	if errs := authHandler.validator.Validate(validatorData); errs != nil {
 		return errors.CreateValidationError(errs)
 	}
 
-	authSession := context.Locals("auth_session").(auth.UserSession)
-
-	if !auth.CheckPasswordHash(validatorData.Password, authSession.User.HashedPassword) {
-		return fiber.NewError(fiber.StatusUnauthorized, "Unauthorized")
-	}
-
-	now := time.Now()
-	key, err := totp.Generate(totp.GenerateOpts{
-		Issuer:      "open_board",
-		AccountName: authSession.User.Email,
-	})
+	authSession := context.Locals("auth_session").(models.Session)
+	passwordResetToken, err := authHandler.authService.IssueUserPasswordResetToken(authSession.User, validatorData)
 	if err != nil {
-		return err
-	}
-
-	token, err := totp.GenerateCode(key.Secret(), now)
-	if err != nil {
-		return err
-	}
-
-	passwordResetQuery := sqlbuilder.InsertInto("open_board_password_reset_token").
-		Cols("expires_on", "type", "user_id", "token").
-		Values(now.Add(time.Minute*15), "auth", authSession.User.Id, token)
-
-	if err := db.Instance.Exec(passwordResetQuery); err != nil {
 		return err
 	}
 
@@ -530,207 +373,139 @@ func LocalAuthenticatedPasswordTokenIssuer(context *fiber.Ctx) error {
 			fiber.StatusOK,
 			"Password reset token was created successfully",
 			auth.AuthenticatedPasswordResetResponse{
-				Token: token,
+				Token: passwordResetToken.Token,
 			},
 		),
 	)
 }
 
-func LocalUnauthenticatedPasswordResetTokenIntrospect(context *fiber.Ctx) error {
-	validatorData := new(validators.ResetPasswordTokenIntrospectValidator)
-
-	if err := context.BodyParser(validatorData); err != nil {
-		return err
-	}
-	if errs := validators.Instance.Validate(validatorData); errs != nil {
-		return errors.CreateValidationError(errs)
-	}
-
-	resetToken := new(auth.PasswordResetToken)
-	resetTokenQuery := sqlbuilder.Select("id", "date_created", "type", "user_id", "expires_on", "token").From("open_board_password_reset_token")
-
-	resetTokenQuery.Where(resetTokenQuery.Equal("token", validatorData.Token))
-
-	if err := db.Instance.One(resetTokenQuery, resetToken); err != nil {
-		return err
-	}
-	if resetToken == nil {
-		return responses.JSONResponse(context, fiber.StatusBadRequest, fiber.Map{"valid": false})
-	}
-
-	now := time.Now().Local()
-	deleteResetTokenQuery := sqlbuilder.DeleteFrom("open_board_password_reset_token")
-
-	deleteResetTokenQuery.Where(deleteResetTokenQuery.Equal("token", validatorData.Token))
-
-	if now.After(resetToken.ExpiresOn) {
-		if err := db.Instance.Exec(deleteResetTokenQuery); err != nil {
-			return err
-		}
-
-		return responses.JSONResponse(context, fiber.StatusBadRequest, fiber.Map{"valid": false})
-	}
-
-	return responses.JSONResponse(context, fiber.StatusOK, fiber.Map{"valid": true})
-}
-
-func LocalUnauthenticatedPasswordReset(context *fiber.Ctx) error {
+func (authHandler *AuthHandler) LocalUnauthenticatedPasswordReset(context *fiber.Ctx) error {
 	validatorData := new(validators.ResetPasswordValidator)
 
 	if err := context.BodyParser(validatorData); err != nil {
 		return err
 	}
-	if errs := validators.Instance.Validate(validatorData); errs != nil {
+
+	if errs := authHandler.validator.Validate(validatorData); errs != nil {
 		return errors.CreateValidationError(errs)
 	}
 
-	resetToken := new(auth.PasswordResetToken)
-	resetTokenQuery := sqlbuilder.Select("id", "date_created", "type", "user_id", "expires_on", "token").From("open_board_password_reset_token")
-
-	resetTokenQuery.Where(resetTokenQuery.Equal("token", validatorData.Token))
-
-	if err := db.Instance.One(resetTokenQuery, resetToken); err != nil {
-		return err
-	}
-	if resetToken == nil {
-		return fiber.NewError(fiber.StatusNotFound, "reset token not found")
-	}
-
-	now := time.Now().Local()
-	deleteResetTokenQuery := sqlbuilder.DeleteFrom("open_board_password_reset_token")
-
-	deleteResetTokenQuery.Where(deleteResetTokenQuery.Equal("token", validatorData.Token))
-
-	if now.After(resetToken.ExpiresOn) {
-		if err := db.Instance.Exec(deleteResetTokenQuery); err != nil {
-			return err
-		}
-
-		return fiber.NewError(fiber.StatusBadRequest, "reset token is expired")
-	}
-
-	if resetToken.Type != "form" {
-		return fiber.NewError(fiber.StatusBadRequest, "reset token is invalid")
-	}
-
-	hashedPassword, err := auth.HashPassword(validatorData.NewPassword)
-	if err != nil {
-		return err
-	}
-
-	transaction, err := db.Instance.Begin()
-	if err != nil {
-		return err
-	}
-
-	updateUserQuery := sqlbuilder.Update("open_board_user")
-	deleteSessionQuery := sqlbuilder.DeleteFrom("open_board_user_session")
-
-	updateUserQuery.Where(updateUserQuery.Equal("id", resetToken.UserId)).Set(
-		updateUserQuery.Assign("date_updated", now),
-		updateUserQuery.Assign("hashed_password", hashedPassword),
-	)
-	deleteSessionQuery.Where(deleteSessionQuery.Equal("user_id", resetToken.UserId))
-
-	if err := transaction.Exec(updateUserQuery); err != nil {
-		return err
-	}
-
-	if err := transaction.Exec(deleteSessionQuery); err != nil {
-		return err
-	}
-
-	if err := transaction.Exec(deleteResetTokenQuery); err != nil {
-		return err
-	}
-
-	if err := transaction.Commit(); err != nil {
+	if err := authHandler.authService.ResetForgottenPassword(validatorData); err != nil {
 		return err
 	}
 
 	return responses.JSONResponse(context, fiber.StatusOK, responses.GenericMessage{Message: "Password reset successfully!"})
 }
 
-func LocalAuthenticatedPasswordReset(context *fiber.Ctx) error {
+func (authHandler *AuthHandler) LocalAuthenticatedPasswordReset(context *fiber.Ctx) error {
 	validatorData := new(validators.ResetPasswordValidator)
 
 	if err := context.BodyParser(validatorData); err != nil {
 		return err
 	}
 
-	if errs := validators.Instance.Validate(validatorData); errs != nil {
+	if errs := authHandler.validator.Validate(validatorData); errs != nil {
 		return errors.CreateValidationError(errs)
 	}
 
-	resetToken := new(auth.PasswordResetToken)
-	resetTokenQuery := sqlbuilder.Select("id", "date_created", "type", "user_id", "expires_on", "token").From("open_board_password_reset_token")
-
-	resetTokenQuery.Where(resetTokenQuery.Equal("token", validatorData.Token))
-
-	if err := db.Instance.One(resetTokenQuery, resetToken); err != nil {
-		return err
-	}
-	if resetToken == nil {
-		return fiber.NewError(fiber.StatusNotFound, "reset token not found")
-	}
-
-	authSession := context.Locals("auth_session").(auth.UserSession)
-
-	if resetToken.UserId != authSession.User.Id {
-		return fiber.NewError(fiber.StatusUnauthorized, "Unauthorized")
-	}
-
-	now := time.Now().Local()
-	deleteResetTokenQuery := sqlbuilder.DeleteFrom("open_board_password_reset_token")
-
-	deleteResetTokenQuery.Where(deleteResetTokenQuery.Equal("token", validatorData.Token))
-
-	if now.After(resetToken.ExpiresOn) {
-		if err := db.Instance.Exec(deleteResetTokenQuery); err != nil {
-			return err
-		}
-
-		return fiber.NewError(fiber.StatusBadRequest, "reset token is expired")
-	}
-
-	if resetToken.Type != "auth" {
-		return fiber.NewError(fiber.StatusBadRequest, "reset token is invalid")
-	}
-
-	hashedPassword, err := auth.HashPassword(validatorData.NewPassword)
-	if err != nil {
-		return err
-	}
-
-	transaction, err := db.Instance.Begin()
-	if err != nil {
-		return err
-	}
-
-	updateUserQuery := sqlbuilder.Update("open_board_user")
-	deleteSessionQuery := sqlbuilder.DeleteFrom("open_board_user_session")
-
-	updateUserQuery.Where(updateUserQuery.Equal("id", resetToken.UserId)).Set(
-		updateUserQuery.Assign("date_updated", now),
-		updateUserQuery.Assign("hashed_password", hashedPassword),
-	)
-	deleteSessionQuery.Where(deleteSessionQuery.Equal("user_id", resetToken.UserId))
-
-	if err := transaction.Exec(updateUserQuery); err != nil {
-		return err
-	}
-
-	if err := transaction.Exec(deleteSessionQuery); err != nil {
-		return err
-	}
-
-	if err := transaction.Exec(deleteResetTokenQuery); err != nil {
-		return err
-	}
-
-	if err := transaction.Commit(); err != nil {
+	session := context.Locals("auth_session").(models.Session)
+	if err := authHandler.authService.ResetUserPassword(session.User, validatorData); err != nil {
 		return err
 	}
 
 	return responses.JSONResponse(context, fiber.StatusOK, responses.GenericMessage{Message: "Password Reset successfully!"})
+}
+
+// UserInfoGET godoc
+//
+//	@Description 	Retrieve own user details. IMPORTANT: The actual endpoint is '/auth/@me' (with @ symbol)
+//	@Summary 		Retrieve user details
+//	@Tags			authentication
+//	@Success		200 {object} responses.OkResponse[auth.User]
+//	@Failure		401,500 {object} responses.ErrorResponse[responses.GenericMessage]
+//	@Router			/auth/me [get]
+//	@Produce		json
+func (*AuthHandler) UserInfoGET(context *fiber.Ctx) error {
+	session := context.Locals("auth_session").(auth.UserSession)
+
+	return responses.JSONResponse(context, fiber.StatusOK, responses.OKResponse(fiber.StatusOK, session.User))
+}
+
+// UserInfoPATCH godoc
+//
+//	@Description 	Update own user details. IMPORTANT: The actual endpoint is '/auth/@me' (with @ symbol)
+//	@Summary 		Update user details
+//	@Tags			authentication
+//	@Param			request body validators.UpdateUserValidator false "request Data"
+//	@Success		200 {object} responses.SuccessResponse[auth.User]
+//	@Failure		422 {object} responses.ErrorResponse[validators.ErrorResponseMap]
+//	@Failure		401,500 {object} responses.ErrorResponse[responses.GenericMessage]
+//	@Router			/auth/me [patch]
+//	@Accept			json
+//	@Produce		json
+func (authHandler *AuthHandler) UserInfoPATCH(context *fiber.Ctx) error {
+	updateUserValidator := new(validators.UpdateUserValidator)
+
+	if err := context.BodyParser(updateUserValidator); err != nil {
+		return err
+	}
+
+	if errs := authHandler.validator.Validate(updateUserValidator); len(errs) > 0 {
+		return errors.CreateValidationError(errs)
+	}
+
+	session := context.Locals("auth_session").(models.Session)
+	user, err := authHandler.userService.UpdateUser(session.User.ID, updateUserValidator)
+	if err != nil {
+		return err
+	}
+
+	return responses.JSONResponse(
+		context,
+		fiber.StatusOK,
+		responses.OKResponse(fiber.StatusOK, fiber.Map{
+			"message": fmt.Sprintf("user: %s has been successfully updated", user.Username),
+			"user":    user,
+		}),
+	)
+}
+
+// UserInfoDELETE godoc
+//
+//	@Description 	Delete own user account. IMPORTANT: The actual endpoint is '/auth/@me' (with @ symbol)
+//	@Summary 		Delete user account
+//	@Tags			authentication
+//	@Success		200 {object} responses.OkResponse[responses.GenericMessage]
+//	@Failure		401,500 {object} responses.ErrorResponse[responses.GenericMessage]
+//	@Router			/auth/me [delete]
+//	@Produce		json
+func (authHandler *AuthHandler) UserInfoDELETE(context *fiber.Ctx) error {
+	session := context.Locals("auth_session").(models.Session)
+	if err := authHandler.userService.DeleteUser(session.User.ID); err != nil {
+		return err
+	}
+
+	return responses.JSONResponse(
+		context,
+		fiber.StatusOK,
+		responses.OKResponse(
+			fiber.StatusOK,
+			responses.GenericMessage{Message: fmt.Sprintf("user: %s has been successfully deleted", session.User.Username)},
+		),
+	)
+}
+
+// UserSessionsGET godoc
+//
+//	@Description 	List own active auth sessions. IMPORTANT: The actual endpoint is '/auth/@me/sessions' (with @ symbol)
+//	@Summary 		List sessions
+//	@Tags			authentication
+//	@Success		200 {object} responses.OkCollectionResponse[auth.UserSessionReadOnly]
+//	@Failure		401,500 {object} responses.ErrorResponse[responses.GenericMessage]
+//	@Router			/auth/me/sessions [get]
+//	@Produce		json
+func (*AuthHandler) UserSessionsGET(context *fiber.Ctx) error {
+	session := context.Locals("auth_session").(models.Session)
+
+	return responses.JSONResponse(context, fiber.StatusOK, responses.OKCollectionResponse(fiber.StatusOK, session.User.Sessions))
 }

@@ -1,6 +1,7 @@
 package service
 
 import (
+	"VEDA95/open_board/api/internal/auth"
 	models "VEDA95/open_board/api/internal/db/model"
 	"VEDA95/open_board/api/internal/db/repository"
 	"VEDA95/open_board/api/internal/http/validators"
@@ -52,7 +53,7 @@ func (authService *AuthService) ValidateSession(token string) (*models.Session, 
 	return session, nil
 }
 
-func (authService *AuthService) LocalLogin(data *validators.LocalLoginValidator, userAgent string, IPAdress string) (*models.Session, error) {
+func (authService *AuthService) LocalLogin(data *validators.LocalLoginValidator, userAgent string, IPAdress string) (*auth.LoginResponse, error) {
 	expiresInEnv := os.Getenv("AUTH_SESSION_EXPIRES_IN")
 	refreshExpiresInEnv := os.Getenv("AUTH_SESSION_REFRESH_EXPIRES_IN")
 
@@ -86,6 +87,7 @@ func (authService *AuthService) LocalLogin(data *validators.LocalLoginValidator,
 		return nil, errors.New("account has been disabled")
 	}
 
+	response := &auth.LoginResponse{ExpiresIn: expiresIn}
 	columns := []string{"session_type", "ip_address", "user_agent", "expires_on", "user_id", "access_token"}
 	now := time.Now()
 	session := &models.Session{
@@ -101,6 +103,7 @@ func (authService *AuthService) LocalLogin(data *validators.LocalLoginValidator,
 		refreshExpiresOn := now.Add(time.Second * time.Duration(refreshExpiresIn))
 		session.RememberMe = true
 		session.RefreshExpiresOn = &refreshExpiresOn
+		response.RefreshExpiresIn = &refreshExpiresIn
 		columns = append(columns, "remember_me", "refresh_expires_on", "refresh_token")
 	}
 
@@ -122,10 +125,13 @@ func (authService *AuthService) LocalLogin(data *validators.LocalLoginValidator,
 		return nil, err3
 	}
 
-	return session, nil
+	session.User = user
+	response.Session = session
+
+	return response, nil
 }
 
-func (authService *AuthService) LocalRefresh(token string, remember bool) (*models.Session, error) {
+func (authService *AuthService) LocalRefresh(token string) (*auth.LoginResponse, error) {
 	expiresInEnv := os.Getenv("AUTH_SESSION_EXPIRES_IN")
 	refreshExpiresInEnv := os.Getenv("AUTH_SESSION_REFRESH_EXPIRES_IN")
 
@@ -159,13 +165,15 @@ func (authService *AuthService) LocalRefresh(token string, remember bool) (*mode
 	}
 
 	columns := []string{"expires_on", "access_token"}
+	response := &auth.LoginResponse{ExpiresIn: expiresIn}
 	now := time.Now()
 	session.ExpiresOn = now.Add(time.Second * time.Duration(expiresIn))
 
-	if remember {
+	if session.RememberMe {
 		refreshExpiresOn := now.Add(time.Second * time.Duration(refreshExpiresIn))
 		session.RememberMe = true
 		session.RefreshExpiresOn = &refreshExpiresOn
+		response.RefreshExpiresIn = &refreshExpiresIn
 		columns = append(columns, "remember_me", "refresh_expires_on", "refresh_token")
 	}
 
@@ -180,7 +188,9 @@ func (authService *AuthService) LocalRefresh(token string, remember bool) (*mode
 		return nil, err2
 	}
 
-	return session, nil
+	response.Session = session
+
+	return response, nil
 }
 
 func (authService *AuthService) LocalLogout(token string) error {
