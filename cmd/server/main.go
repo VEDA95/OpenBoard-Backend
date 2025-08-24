@@ -75,10 +75,10 @@ func main() {
 	emailService, err := service.NewEmailService(emailRepo)
 	if err != nil {
 		if !strings.Contains(err.Error(), "required email settings are missing") {
-			log.Fatal(err)
+			logger.Fatal().Err(err).Msg("")
 		}
 
-		log.Print("WARN:", err)
+		logger.Warn().Err(err).Msg("")
 	}
 
 	userRepo := repository.NewUserRepository(dbInstance)
@@ -98,7 +98,7 @@ func main() {
 	authMiddleware := middleware.NewAuthMiddleware(authService)
 
 	app := fiber.New(fiber.Config{
-		ErrorHandler: errors.ErrorHandler,
+		ErrorHandler: errors.ErrorHandler(logger),
 		JSONEncoder:  json.Marshal,
 		JSONDecoder:  json.Unmarshal,
 	})

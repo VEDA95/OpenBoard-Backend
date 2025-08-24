@@ -3,49 +3,51 @@ package errors
 import (
 	"VEDA95/open_board/api/internal/http/responses"
 	"VEDA95/open_board/api/internal/http/validators"
-	"VEDA95/open_board/api/internal/log"
 	"errors"
+	"strings"
+
 	"github.com/goccy/go-json"
 	"github.com/gofiber/fiber/v2"
-	"strings"
+	"github.com/rs/zerolog"
 )
 
-func ErrorHandler(context *fiber.Ctx, err error) error {
-	context.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
+func ErrorHandler(logger *zerolog.Logger) fiber.ErrorHandler {
+	return func(context *fiber.Ctx, err error) error {
+		context.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
 
-	code := fiber.StatusInternalServerError
-	var fiberErr *fiber.Error
+		code := fiber.StatusInternalServerError
+		var fiberErr *fiber.Error
 
-	if errors.As(err, &fiberErr) {
-		code = fiberErr.Code
-	}
-
-	errorString := err.Error()
-	runes := []rune(errorString)
-
-	if code == 500 {
-		log.Logger.Error().Err(err).Msg(errorString)
-	}
-
-	if strings.Contains(string(runes[0]), "{") && strings.Contains(string(runes[len(runes)-1]), "}") {
-		validationErrs := make(validators.ErrorResponseMap)
-		err := json.Unmarshal([]byte(errorString), &validationErrs)
-
-		if err == nil {
-			return context.
-				Status(fiber.StatusUnprocessableEntity).
-				JSON(responses.ErrorResp(fiber.StatusUnprocessableEntity, validationErrs))
+		if errors.As(err, &fiberErr) {
+			code = fiberErr.Code
 		}
 
-		errorString = err.Error()
-	}
+		errorString := err.Error()
+		runes := []rune(errorString)
 
-	return context.Status(code).JSON(responses.ErrorRespMessage(code, errorString))
+		if code == 500 {
+			logger.Error().Err(err).Msg(errorString)
+		}
+
+		if strings.Contains(string(runes[0]), "{") && strings.Contains(string(runes[len(runes)-1]), "}") {
+			validationErrs := make(validators.ErrorResponseMap)
+			err := json.Unmarshal([]byte(errorString), &validationErrs)
+
+			if err == nil {
+				return context.
+					Status(fiber.StatusUnprocessableEntity).
+					JSON(responses.ErrorResp(fiber.StatusUnprocessableEntity, validationErrs))
+			}
+
+			errorString = err.Error()
+		}
+
+		return context.Status(code).JSON(responses.ErrorRespMessage(code, errorString))
+	}
 }
 
 func CreateValidationError(errs validators.ErrorResponseMap) error {
 	serializedData, err := json.Marshal(errs)
-
 	if err != nil {
 		return err
 	}
