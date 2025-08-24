@@ -1,7 +1,6 @@
 package routes
 
 import (
-	"VEDA95/open_board/api/internal/auth"
 	"VEDA95/open_board/api/internal/errors"
 	"VEDA95/open_board/api/internal/http/responses"
 	"VEDA95/open_board/api/internal/http/validators"
@@ -28,7 +27,7 @@ func NewPermissionHandler(permissionService *service.PermissionService, validato
 //	@Description 	List all permissions
 //	@Summary 		List permissions
 //	@Tags			authorization
-//	@Success		200 {object} responses.OkCollectionResponse[auth.Permission]
+//	@Success		200 {object} responses.OkCollectionResponse[models.Permission]
 //	@Failure		500 {object} responses.ErrorResponse[responses.GenericMessage]
 //	@Router			/api/permissions [get]
 //	@Produce		json
@@ -47,7 +46,7 @@ func (permissionHandler *PermissionHandler) GET(context *fiber.Ctx) error {
 //	@Summary 		Create permission
 //	@Tags			authorization
 //	@Param			request body validators.CreatePermissionValidator false "Request Data"
-//	@Success		201 {object} responses.SuccessResponse[auth.Permission]
+//	@Success		201 {object} responses.SuccessResponse[models.Permission]
 //	@Failure		422 {object} responses.ErrorResponse[validators.ErrorResponseMap]
 //	@Failure		500 {object} responses.ErrorResponse[responses.GenericMessage]
 //	@Router			/api/permissions [post]
@@ -82,7 +81,7 @@ func (permissionHandler *PermissionHandler) POST(context *fiber.Ctx) error {
 //	@Summary 		List permission
 //	@Tags			authorization
 //	@Param			id path string true "Permission ID"
-//	@Success		200 {object} responses.OkResponse[auth.Permission]
+//	@Success		200 {object} responses.OkResponse[models.Permission]
 //	@Failure		422 {object} responses.ErrorResponse[validators.ErrorResponseMap]
 //	@Failure		404,500 {object} responses.ErrorResponse[responses.GenericMessage]
 //	@Router			/api/permissions/{id} [get]
@@ -113,7 +112,7 @@ func (permissionHandler *PermissionHandler) GETByID(context *fiber.Ctx) error {
 //	@Tags			authorization
 //	@Param			id path string true "Permission ID"
 //	@Param			request body validators.UpdatePermissionValidator false "Request Data"
-//	@Success		200 {object} responses.SuccessResponse[auth.Permission]
+//	@Success		200 {object} responses.SuccessResponse[models.Permission]
 //	@Failure		422 {object} responses.ErrorResponse[validators.ErrorResponseMap]
 //	@Failure		404,500 {object} responses.ErrorResponse[responses.GenericMessage]
 //	@Router			/api/permissions/{id} [patch]
@@ -130,7 +129,7 @@ func (permissionHandler *PermissionHandler) PATCH(context *fiber.Ctx) error {
 		return errors.CreateValidationError(errs)
 	}
 
-	permission, err := auth.GetPermission(paramValidator.Id)
+	permission, err := permissionHandler.service.GetPermission(paramValidator.Id)
 	if err != nil {
 		return err
 	}

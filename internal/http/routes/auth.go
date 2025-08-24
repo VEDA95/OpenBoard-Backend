@@ -421,12 +421,12 @@ func (authHandler *AuthHandler) LocalAuthenticatedPasswordReset(context *fiber.C
 //	@Description 	Retrieve own user details. IMPORTANT: The actual endpoint is '/auth/@me' (with @ symbol)
 //	@Summary 		Retrieve user details
 //	@Tags			authentication
-//	@Success		200 {object} responses.OkResponse[auth.User]
+//	@Success		200 {object} responses.OkResponse[models.User]
 //	@Failure		401,500 {object} responses.ErrorResponse[responses.GenericMessage]
 //	@Router			/auth/me [get]
 //	@Produce		json
 func (*AuthHandler) UserInfoGET(context *fiber.Ctx) error {
-	session := context.Locals("auth_session").(auth.UserSession)
+	session := context.Locals("auth_session").(models.Session)
 
 	return responses.JSONResponse(context, fiber.StatusOK, responses.OKResponse(fiber.StatusOK, session.User))
 }
@@ -437,7 +437,7 @@ func (*AuthHandler) UserInfoGET(context *fiber.Ctx) error {
 //	@Summary 		Update user details
 //	@Tags			authentication
 //	@Param			request body validators.UpdateUserValidator false "request Data"
-//	@Success		200 {object} responses.SuccessResponse[auth.User]
+//	@Success		200 {object} responses.SuccessResponse[models.User]
 //	@Failure		422 {object} responses.ErrorResponse[validators.ErrorResponseMap]
 //	@Failure		401,500 {object} responses.ErrorResponse[responses.GenericMessage]
 //	@Router			/auth/me [patch]
@@ -500,7 +500,7 @@ func (authHandler *AuthHandler) UserInfoDELETE(context *fiber.Ctx) error {
 //	@Description 	List own active auth sessions. IMPORTANT: The actual endpoint is '/auth/@me/sessions' (with @ symbol)
 //	@Summary 		List sessions
 //	@Tags			authentication
-//	@Success		200 {object} responses.OkCollectionResponse[auth.UserSessionReadOnly]
+//	@Success		200 {object} responses.OkCollectionResponse[models.Session]
 //	@Failure		401,500 {object} responses.ErrorResponse[responses.GenericMessage]
 //	@Router			/auth/me/sessions [get]
 //	@Produce		json
