@@ -13,6 +13,7 @@ import (
 
 func NewDB(appLogger *zerolog.Logger, models []any) (*gorm.DB, error) {
 	dsn := os.Getenv("DATABASE_URL")
+	envType := os.Getenv("ENV_TYPE")
 
 	if len(dsn) == 0 {
 		return nil, errors.New("DATABASE_URL not set")
@@ -21,7 +22,7 @@ func NewDB(appLogger *zerolog.Logger, models []any) (*gorm.DB, error) {
 	gormLogger := NewGormZerologger(appLogger)
 
 	var logLevel logger.LogLevel
-	if os.Getenv("ENV_TYPE") == "production" {
+	if envType == "production" {
 		logLevel = logger.Error
 	} else {
 		logLevel = logger.Info
@@ -47,8 +48,8 @@ func NewDB(appLogger *zerolog.Logger, models []any) (*gorm.DB, error) {
 	sqlDB.SetMaxOpenConns(100)
 	sqlDB.SetConnMaxLifetime(time.Hour)
 
-	if os.Getenv("ENV") == "development" {
-		if err := AutoMigrate(instacne, models); err != nil {
+	if envType == "development" {
+		if err := instacne.AutoMigrate(models...); err != nil {
 			return nil, err
 		}
 	}

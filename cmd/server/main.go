@@ -56,11 +56,11 @@ func main() {
 	}
 
 	models := []any{
-		models.User{},
-		models.Session{},
-		models.Role{},
-		models.Permission{},
-		models.PasswordResetToken{},
+		&models.User{},
+		&models.Session{},
+		&models.Role{},
+		&models.Permission{},
+		&models.PasswordResetToken{},
 	}
 	dbInstance, err := db.NewDB(logger, models)
 	if err != nil {
