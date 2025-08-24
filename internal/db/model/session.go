@@ -1,7 +1,8 @@
 package models
 
 import (
-	"VEDA95/open_board/api/internal/auth"
+	"crypto/rand"
+	"encoding/base64"
 	"time"
 
 	"gorm.io/datatypes"
@@ -22,8 +23,18 @@ type Session struct {
 	User             *User          `gorm:"foreignKey:UserID" json:"user"`
 }
 
+func (*Session) createSessionToken() (string, error) {
+	randomBytes := make([]byte, 32)
+
+	if _, err := rand.Read(randomBytes); err != nil {
+		return "", err
+	}
+
+	return base64.URLEncoding.EncodeToString(randomBytes), nil
+}
+
 func (session *Session) GenerateTokens() error {
-	token, err := auth.CreateSessionToken()
+	token, err := session.createSessionToken()
 	if err != nil {
 		return err
 	}
@@ -34,7 +45,7 @@ func (session *Session) GenerateTokens() error {
 		return nil
 	}
 
-	refreshToken, err := auth.CreateSessionToken()
+	refreshToken, err := session.createSessionToken()
 	if err != nil {
 		return err
 	}

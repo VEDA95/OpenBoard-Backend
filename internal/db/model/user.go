@@ -1,8 +1,9 @@
 package models
 
 import (
-	"VEDA95/open_board/api/internal/auth"
 	"time"
+
+	"github.com/alexedwards/argon2id"
 )
 
 type User struct {
@@ -20,7 +21,7 @@ type User struct {
 }
 
 func (user *User) HashPassword(password string) error {
-	hashedPassword, err := auth.HashPassword(password)
+	hashedPassword, err := argon2id.CreateHash(password, argon2id.DefaultParams)
 	if err != nil {
 		return nil
 	}
@@ -31,5 +32,10 @@ func (user *User) HashPassword(password string) error {
 }
 
 func (user *User) ValidPassword(password string) bool {
-	return auth.CheckPasswordHash(password, user.HashedPassword)
+	match, err := argon2id.ComparePasswordAndHash(password, user.HashedPassword)
+	if err != nil {
+		return false
+	}
+
+	return match
 }
