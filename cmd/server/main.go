@@ -4,7 +4,6 @@ import (
 	_ "VEDA95/open_board/api/docs"
 	"VEDA95/open_board/api/internal/config"
 	"VEDA95/open_board/api/internal/db"
-	models "VEDA95/open_board/api/internal/db/model"
 	"VEDA95/open_board/api/internal/db/repository"
 	"VEDA95/open_board/api/internal/errors"
 	"VEDA95/open_board/api/internal/http/middleware"
@@ -55,14 +54,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	models := []any{
-		&models.User{},
-		&models.Session{},
-		&models.Role{},
-		&models.Permission{},
-		&models.PasswordResetToken{},
-	}
-	dbInstance, err := db.NewDB(logger, models)
+	dbInstance, err := db.NewDB(logger)
 	if err != nil {
 		logger.Fatal().Err(err).Msg("")
 	}

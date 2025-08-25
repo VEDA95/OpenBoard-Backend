@@ -11,7 +11,7 @@ import (
 	"gorm.io/gorm/logger"
 )
 
-func NewDB(appLogger *zerolog.Logger, models []any) (*gorm.DB, error) {
+func NewDB(appLogger *zerolog.Logger) (*gorm.DB, error) {
 	dsn := os.Getenv("DATABASE_URL")
 	envType := os.Getenv("ENV_TYPE")
 
@@ -47,12 +47,6 @@ func NewDB(appLogger *zerolog.Logger, models []any) (*gorm.DB, error) {
 	sqlDB.SetMaxIdleConns(10)
 	sqlDB.SetMaxOpenConns(100)
 	sqlDB.SetConnMaxLifetime(time.Hour)
-
-	if envType == "development" {
-		if err := instacne.AutoMigrate(models...); err != nil {
-			return nil, err
-		}
-	}
 
 	return instacne, nil
 }
