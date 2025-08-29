@@ -76,7 +76,7 @@ func main() {
 			fmt.Println(errorMessage)
 		}
 
-		logger.Fatal().Err(err).Msg("An error occurred when seesing the initial user")
+		logger.Fatal().Err(err).Msg("An error occurred when seeding the initial user")
 	}
 
 	fmt.Println("The database has been seeded successfully!")

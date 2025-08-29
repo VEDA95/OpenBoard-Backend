@@ -164,7 +164,7 @@ func (seeder *Seeder) SeedRoles() error {
 	}
 
 	if len(rolesToCreate) > 0 {
-		if err := seeder.db.Omit("Permissions").Create(&rolesToCreate).Error; err != nil {
+		if err := seeder.db.Create(&rolesToCreate).Error; err != nil {
 			return err
 		}
 	}
@@ -199,19 +199,20 @@ func (seeder *Seeder) SeedInitialUser() error {
 	}
 
 	role := new(models.Role)
-	if err := seeder.db.Where("name = ?", "auth:superuser").First(role).Error; err != nil {
+	if err := seeder.db.Where("name = ?", "superuser").First(role).Error; err != nil {
 		return err
 	}
 
 	user := &models.User{
 		Username: initialUsername,
 		Email:    initialEmail,
+		Roles:    []*models.Role{role},
 	}
 	if err := user.HashPassword(initialPassword); err != nil {
 		return err
 	}
 
-	if err := seeder.db.Omit("Roles", "Sessions").Create(user).Error; err != nil {
+	if err := seeder.db.Omit("Sessions").Create(user).Error; err != nil {
 		return err
 	}
 
