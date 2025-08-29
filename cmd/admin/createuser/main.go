@@ -123,7 +123,8 @@ func main() {
 		userRoleIDs[index] = userRoles[index].ID
 	}
 
-	if err := userRepo.CreateWithRoles(user, userRoleIDs, repository.QueryOptions{}, repository.QueryOptions{}); err != nil {
+	err2 := userRepo.CreateWithRoles(user, userRoleIDs, repository.QueryOptions{Omit: []string{"Roles", "Sessions"}}, repository.QueryOptions{Omit: []string{"Permissions"}})
+	if err2 != nil {
 		if envType == "production" {
 			fmt.Println(errorMessage)
 		}

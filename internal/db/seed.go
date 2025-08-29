@@ -127,13 +127,13 @@ func (seeder *Seeder) SeedRoles() error {
 		},
 	}
 	currentRoles := make([]*models.Role, 0)
-	roleNames := make([]string, 0)
+	roleNames := make([]string, len(defaultRoles))
 
-	for _, defaultRole := range defaultRoles {
-		roleNames = append(roleNames, defaultRole.Name)
+	for index := range roleNames {
+		roleNames[index] = defaultRoles[index].Name
 	}
 
-	if err := seeder.db.Where("name in ?", roleNames).Find(&currentRoles).Error; err != nil {
+	if err := seeder.db.Omit("Permissions").Where("name in ?", roleNames).Find(&currentRoles).Error; err != nil {
 		return err
 	}
 
@@ -164,7 +164,7 @@ func (seeder *Seeder) SeedRoles() error {
 	}
 
 	if len(rolesToCreate) > 0 {
-		if err := seeder.db.Create(&rolesToCreate).Error; err != nil {
+		if err := seeder.db.Omit("Permissions").Create(&rolesToCreate).Error; err != nil {
 			return err
 		}
 	}
@@ -211,7 +211,7 @@ func (seeder *Seeder) SeedInitialUser() error {
 		return err
 	}
 
-	if err := seeder.db.Create(user).Error; err != nil {
+	if err := seeder.db.Omit("Roles", "Sessions").Create(user).Error; err != nil {
 		return err
 	}
 

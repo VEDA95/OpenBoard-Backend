@@ -63,7 +63,9 @@ func main() {
 		logger.Fatal().Err(errors.CreateValidationError(errs)).Msg("An error occurred during validation")
 	}
 
-	user, err := userRepo.FindByUsername(validatorData.Username, repository.QueryOptions{})
+	user, err := userRepo.FindByUsername(validatorData.Username, repository.QueryOptions{
+		Omit: []string{"Roles", "Sessions"},
+	})
 	if err != nil {
 		if envType == "production" {
 			fmt.Println(errorMessage)
