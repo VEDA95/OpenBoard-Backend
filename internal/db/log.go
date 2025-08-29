@@ -27,25 +27,19 @@ func NewGormZerologger(logger *zerolog.Logger) *GormZerologger {
 }
 
 func (l *GormZerologger) LogMode(level gormlogger.LogLevel) gormlogger.Interface {
-	newLogger := *l
-
 	switch level {
 	case gormlogger.Silent:
 		zeroLevel := zerolog.Disabled
-		newLogger.Logger = &zerolog.Logger{}
-		newLogger.Logger.Level(zeroLevel)
+		l.Logger.Level(zeroLevel)
 	case gormlogger.Error:
-		logger := l.Logger.Level(zerolog.ErrorLevel)
-		newLogger.Logger = &logger
+		l.Logger.Level(zerolog.ErrorLevel)
 	case gormlogger.Warn:
-		logger := l.Logger.Level(zerolog.WarnLevel)
-		newLogger.Logger = &logger
+		l.Logger.Level(zerolog.WarnLevel)
 	case gormlogger.Info:
-		logger := l.Logger.Level(zerolog.InfoLevel)
-		newLogger.Logger = &logger
+		l.Logger.Level(zerolog.InfoLevel)
 	}
 
-	return &newLogger
+	return l
 }
 
 func (logger *GormZerologger) Info(ctx context.Context, msg string, data ...any) {

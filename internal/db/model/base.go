@@ -1,6 +1,7 @@
 package models
 
 import (
+	"log"
 	"time"
 
 	"github.com/gofrs/uuid/v5"
@@ -14,6 +15,11 @@ type Base struct {
 }
 
 func (base *Base) BeforeCreate(tx *gorm.DB) error {
+	log.Default().Printf("id size: %d", len(base.ID))
+	if len(base.ID) > 0 {
+		return nil
+	}
+
 	id, err := uuid.NewV4()
 	if err != nil {
 		return err

@@ -50,7 +50,3 @@ func NewDB(appLogger *zerolog.Logger) (*gorm.DB, error) {
 
 	return instacne, nil
 }
-
-func AutoMigrate(dbInstance *gorm.DB, models []any) error {
-	return dbInstance.AutoMigrate(models...)
-}

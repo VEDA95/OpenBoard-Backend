@@ -14,8 +14,8 @@ type User struct {
 	FirstName      *string    `gorm:"type:varchar(255)" json:"first_name"`
 	LastName       *string    `gorm:"type:varchar(255)" json:"last_name"`
 	HashedPassword string     `gorm:"type:text;not null" json:"-"`
-	Enabled        bool       `gorm:"not null" json:"enabled" default:"true"`
-	EmailVerified  bool       `gorm:"not null" json:"email_verified" default:"false"`
+	Enabled        bool       `gorm:"not null;default:true" json:"enabled" default:"true"`
+	EmailVerified  bool       `gorm:"not null;default:false" json:"email_verified" default:"false"`
 	Roles          []*Role    `gorm:"many2many:user_roles" json:"roles"`
 	Sessions       []*Session `gorm:"foreignKey:UserID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL" json:"-"`
 }
@@ -23,7 +23,7 @@ type User struct {
 func (user *User) HashPassword(password string) error {
 	hashedPassword, err := argon2id.CreateHash(password, argon2id.DefaultParams)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	user.HashedPassword = hashedPassword

@@ -20,9 +20,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	adminUsername := flag.String("admin-username", "", "Override admin username")
-	adminEmail := flag.String("admin-email", "", "Override admin email")
-	adminPassword := flag.String("admin-pass", "", "Override admin password")
+	adminUsername := flag.String("username", "", "Override admin username")
+	adminEmail := flag.String("email", "", "Override admin email")
+	adminPassword := flag.String("password", "", "Override admin password")
 
 	flag.Parse()
 
@@ -70,14 +70,15 @@ func main() {
 
 		logger.Fatal().Err(err).Msg("An error occurred when seeding roles")
 	}
+	/*
+		if err := seeder.SeedInitialUser(); err != nil {
+			if envType == "production" {
+				fmt.Println(errorMessage)
+			}
 
-	if err := seeder.SeedInitialUser(); err != nil {
-		if envType == "production" {
-			fmt.Println(errorMessage)
+			logger.Fatal().Err(err).Msg("An error occurred when seeding the initial user")
 		}
-
-		logger.Fatal().Err(err).Msg("An error occurred when seeding the initial user")
-	}
+	*/
 
 	fmt.Println("The database has been seeded successfully!")
 }

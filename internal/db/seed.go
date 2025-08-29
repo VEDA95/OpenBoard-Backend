@@ -3,6 +3,7 @@ package db
 import (
 	"VEDA95/open_board/api/internal/auth"
 	models "VEDA95/open_board/api/internal/db/model"
+	"log"
 	"os"
 
 	"gorm.io/gorm"
@@ -148,6 +149,8 @@ func (seeder *Seeder) SeedRoles() error {
 		roleMap[currentRole.Name] = true
 	}
 
+	log.Default().Print(roleMap)
+
 	for _, defaultRole := range defaultRoles {
 		if roleMap[defaultRole.Name] {
 			continue
@@ -160,6 +163,7 @@ func (seeder *Seeder) SeedRoles() error {
 		}
 
 		role.Permissions = permissions
+		log.Default().Print(role.Permissions)
 		rolesToCreate = append(rolesToCreate, role)
 	}
 
