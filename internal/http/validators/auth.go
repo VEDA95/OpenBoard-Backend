@@ -24,6 +24,18 @@ type UpdateUserValidator struct {
 	Roles     *[]string `json:"roles,omitempty" validate:"omitempty"`
 }
 
+type CreateUserProgramValidator struct {
+	Username        string  `validate:"required,min=1"`
+	Email           string  `validate:"required,email"`
+	Password        string  `validate:"required,min=8,max=32"`
+	ConfirmPassword string  `validate:"required,eqfield=Password"`
+	FirstName       *string `validate:"omitempty,min=1"`
+	LastName        *string `validate:"omitempty,min=1"`
+	Admin           bool    `default:"false"`
+	SuperUser       bool    `default:"false"`
+	Roles           []string
+}
+
 type ResetPasswordUserLookupValidator struct {
 	Email string `json:"email" validate:"required,email"`
 }
@@ -40,6 +52,12 @@ type ResetPasswordValidator struct {
 	Token           string `json:"token" validate:"required,len=6"`
 	NewPassword     string `json:"new_password" validate:"required,min=8,max=32"`
 	ConfirmPassword string `json:"confirm_password" validate:"required,eqfield=NewPassword"`
+}
+
+type ResetPasswordProgramValidator struct {
+	Username        string `validate:"required,min=1"`
+	Password        string `validate:"required,min=8,max=32"`
+	ConfirmPassword string `validate:"required,eqfield=Password"`
 }
 
 type CreateRoleValidator struct {
