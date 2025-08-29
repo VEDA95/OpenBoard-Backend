@@ -5,7 +5,6 @@ import (
 	"VEDA95/open_board/api/internal/db"
 	models "VEDA95/open_board/api/internal/db/model"
 	"VEDA95/open_board/api/internal/db/repository"
-	"VEDA95/open_board/api/internal/errors"
 	"VEDA95/open_board/api/internal/http/validators"
 	appLogger "VEDA95/open_board/api/internal/log"
 	"flag"
@@ -32,9 +31,11 @@ func main() {
 	confirmPassword := flag.String("confirm_password", "", "Confirm Password (must be the same as the password)")
 	firstName := flag.String("first", "", "First name")
 	lastName := flag.String("last", "", "Last name")
-	roles := flag.String("roles", "user", "Comma-separated role names")
+	roles := flag.String("roles", "", "Comma-separated role names")
 	superuser := flag.Bool("superuser", false, "Create as superuser")
 	admin := flag.Bool("admin", false, "Create as admin")
+
+	flag.Parse()
 
 	const errorMessage = "An error has occurred during the during the user creation process... Please view the logs for more information"
 	envType := os.Getenv("ENV_TYPE")
@@ -57,12 +58,17 @@ func main() {
 	validatorData := &validators.CreateUserProgramValidator{
 		Username:        *username,
 		Email:           *email,
-		FirstName:       firstName,
-		LastName:        lastName,
 		Password:        *password,
 		ConfirmPassword: *confirmPassword,
 		SuperUser:       *superuser,
-		Roles:           splitRoles,
+	}
+
+	if len(*firstName) > 0 {
+		validatorData.FirstName = firstName
+	}
+
+	if len(*lastName) > 0 {
+		validatorData.LastName = lastName
 	}
 
 	if errs := validator.Validate(validatorData); len(errs) > 0 {
@@ -74,7 +80,7 @@ func main() {
 			}
 		}
 
-		logger.Fatal().Err(errors.CreateValidationError(errs)).Msg("The following validation errors occurred")
+		logger.Fatal().Interface("errors", errs).Msg("The following validation errors occurred")
 	}
 
 	var userCount int64
@@ -123,7 +129,7 @@ func main() {
 		userRoleIDs[index] = userRoles[index].ID
 	}
 
-	err2 := userRepo.CreateWithRoles(user, userRoleIDs, repository.QueryOptions{Omit: []string{"Roles", "Sessions"}}, repository.QueryOptions{Omit: []string{"Permissions"}})
+	err2 := userRepo.CreateWithRoles(user, userRoleIDs, repository.QueryOptions{Omit: []string{"Sessions"}}, repository.QueryOptions{Omit: []string{"Permissions"}})
 	if err2 != nil {
 		if envType == "production" {
 			fmt.Println(errorMessage)
@@ -132,5 +138,5 @@ func main() {
 		logger.Fatal().Err(err).Msg("An error occurred during the user creation process")
 	}
 
-	fmt.Printf("user %s was successfully created!!!\n")
+	fmt.Printf("user %s was successfully created!!!\n", user.Username)
 }
