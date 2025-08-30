@@ -28,3 +28,4 @@ deployment/dev/data/
 build/
 air.log
 node_modules
+initial_credentials.txt
