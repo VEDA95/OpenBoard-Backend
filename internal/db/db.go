@@ -39,6 +39,10 @@ func NewDB(appLogger *zerolog.Logger) (*gorm.DB, error) {
 		return nil, err
 	}
 
+	if envType != "production" {
+		instacne = instacne.Debug()
+	}
+
 	sqlDB, err := instacne.DB()
 	if err != nil {
 		return nil, err

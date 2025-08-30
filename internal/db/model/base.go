@@ -1,21 +1,23 @@
 package models
 
 import (
-	"log"
 	"time"
 
 	"github.com/gofrs/uuid/v5"
 	"gorm.io/gorm"
 )
 
+type BaseID struct {
+	ID string `gorm:"type:uuid;primaryKey" json:"id"`
+}
+
 type Base struct {
-	ID        string     `gorm:"type:uuid;primaryKey" json:"id"`
+	BaseID
 	CreatedAt time.Time  `gorm:"not null" json:"created_at"`
 	UpdatedAt *time.Time `json:"updated_at"`
 }
 
-func (base *Base) BeforeCreate(tx *gorm.DB) error {
-	log.Default().Printf("id size: %d", len(base.ID))
+func (base *BaseID) BeforeCreate(tx *gorm.DB) error {
 	if len(base.ID) > 0 {
 		return nil
 	}

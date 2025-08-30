@@ -70,15 +70,14 @@ func main() {
 
 		logger.Fatal().Err(err).Msg("An error occurred when seeding roles")
 	}
-	/*
-		if err := seeder.SeedInitialUser(); err != nil {
-			if envType == "production" {
-				fmt.Println(errorMessage)
-			}
 
-			logger.Fatal().Err(err).Msg("An error occurred when seeding the initial user")
+	if err := seeder.SeedInitialUser(); err != nil {
+		if envType == "production" {
+			fmt.Println(errorMessage)
 		}
-	*/
+
+		logger.Fatal().Err(err).Msg("An error occurred when seeding the initial user")
+	}
 
 	fmt.Println("The database has been seeded successfully!")
 }
