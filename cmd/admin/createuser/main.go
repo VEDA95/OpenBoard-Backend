@@ -7,12 +7,15 @@ import (
 	"VEDA95/open_board/api/internal/db/repository"
 	"VEDA95/open_board/api/internal/http/validators"
 	appLogger "VEDA95/open_board/api/internal/log"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
 	"os"
 	"slices"
 	"strings"
+
+	"gorm.io/gorm"
 )
 
 func main() {
@@ -92,6 +95,48 @@ func main() {
 		logger.Fatal().Err(err).Msg("An error occurred during the user creation process")
 	}
 
+	existingUserByUsername, err := userRepo.FindByUsername(validatorData.Username, repository.QueryOptions{
+		Select: []string{"id"},
+	})
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		if envType == "production" {
+			fmt.Println(errorMessage)
+		}
+
+		logger.Fatal().Err(err).Msg("An error occurred when checking if user already exists")
+	}
+
+	if existingUserByUsername != nil {
+		err := errors.New("A user with the provided username already exists")
+
+		if envType == "production" {
+			fmt.Print(err.Error())
+		}
+
+		logger.Fatal().Err(err).Msg("An error occurred when checking if the user already exists")
+	}
+
+	existingUserByEmail, err := userRepo.FindByEmail(validatorData.Email, repository.QueryOptions{
+		Select: []string{"id"},
+	})
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		if envType == "production" {
+			fmt.Println(errorMessage)
+		}
+
+		logger.Fatal().Err(err).Msg("An error occurred when checking if user already exists")
+	}
+
+	if existingUserByEmail != nil {
+		err := errors.New("A user with the provided email address already exists")
+
+		if envType == "production" {
+			fmt.Print(err.Error())
+		}
+
+		logger.Fatal().Err(err).Msg("An error occurred when checking if the user already exists")
+	}
+
 	userRoleNames := slices.Clone(splitRoles)
 	user := &models.User{
 		Username:  validatorData.Username,
@@ -104,6 +149,8 @@ func main() {
 		userRoleNames = append(userRoleNames, "superuser")
 	} else if *admin {
 		userRoleNames = append(userRoleNames, "admin")
+	} else if len(splitRoles) == 0 {
+		userRoleNames = append(userRoleNames, "user")
 	}
 
 	if err := user.HashPassword(validatorData.Password); err != nil {

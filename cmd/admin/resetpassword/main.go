@@ -27,6 +27,8 @@ func main() {
 	password := flag.String("password", "", "Password (min 8 chars)")
 	confirmPassword := flag.String("confirm_password", "", "Confirm Password (must be the same as the password)")
 
+	flag.Parse()
+
 	const errorMessage = "An error has occurred during the during the password reset process... Please view the logs for more information"
 	envType := os.Getenv("ENV_TYPE")
 	if len(envType) == 0 {
