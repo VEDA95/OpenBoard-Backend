@@ -20,7 +20,7 @@ func (permissionService *PermissionService) GetPermissions() ([]*models.Permissi
 		return nil, err
 	}
 
-	return permissions, err
+	return permissions, nil
 }
 
 func (permissionService *PermissionService) GetPermission(ID string) (*models.Permission, error) {
@@ -52,7 +52,7 @@ func (permissionService *PermissionService) CreatePermission(data *validators.Cr
 
 func (permissionService *PermissionService) UpdatePermission(ID string, data *validators.UpdatePermissionValidator) (*models.Permission, error) {
 	permission, err := permissionService.repo.FindByID(ID, repository.QueryOptions{
-		Select: []string{"id"},
+		Select: []string{"id", "path"},
 	})
 	if err != nil {
 		return nil, err

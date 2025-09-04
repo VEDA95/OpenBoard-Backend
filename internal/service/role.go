@@ -53,9 +53,7 @@ func (roleService *RoleService) CreateRole(data *validators.CreateRoleValidator)
 		return role, nil
 	}
 
-	err := roleService.repo.Create(role, repository.QueryOptions{
-		Omit: []string{"Permissions"},
-	})
+	err := roleService.repo.Create(role, repository.QueryOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -79,9 +77,7 @@ func (roleService *RoleService) UpdateRole(ID string, data *validators.UpdateRol
 		err := roleService.repo.UpdateWithPermissions(
 			role,
 			*data.Permissions,
-			repository.QueryOptions{
-				Omit: []string{"Permissions"},
-			},
+			repository.QueryOptions{},
 			repository.QueryOptions{},
 		)
 		if err != nil {

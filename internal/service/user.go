@@ -6,6 +6,8 @@ import (
 	"VEDA95/open_board/api/internal/http/validators"
 	"errors"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 type UserService struct {
@@ -22,7 +24,7 @@ func NewUserService(userRepo *repository.UserRepository, roleRepo *repository.Ro
 
 func (userService *UserService) GetUsers() ([]*models.User, error) {
 	users, err := userService.userRepo.FindAll(repository.QueryOptions{
-		Preload: []string{"Roles.Permissions"},
+		Preload: []string{"Roles", "Roles.Permissions"},
 		Omit:    []string{"Sessions"},
 	})
 	if err != nil {
@@ -34,7 +36,7 @@ func (userService *UserService) GetUsers() ([]*models.User, error) {
 
 func (userService *UserService) GetUser(ID string) (*models.User, error) {
 	user, err := userService.userRepo.FindByID(ID, repository.QueryOptions{
-		Preload: []string{"Roles.Permissions"},
+		Preload: []string{"Roles", "Roles.Permissions"},
 		Omit:    []string{"Sessions"},
 	})
 	if err != nil {
@@ -46,7 +48,7 @@ func (userService *UserService) GetUser(ID string) (*models.User, error) {
 
 func (userService *UserService) GetUserByUsername(username string) (*models.User, error) {
 	user, err := userService.userRepo.FindByUsername(username, repository.QueryOptions{
-		Preload: []string{"Roles.Permissions"},
+		Preload: []string{"Roles", "Roles.Permissions"},
 		Omit:    []string{"Sessions"},
 	})
 	if err != nil {
@@ -58,7 +60,7 @@ func (userService *UserService) GetUserByUsername(username string) (*models.User
 
 func (userService *UserService) GetUserByEmail(email string) (*models.User, error) {
 	user, err := userService.userRepo.FindByEmail(email, repository.QueryOptions{
-		Preload: []string{"Roles.Permissions"},
+		Preload: []string{"Roles", "Roles.Permissions"},
 		Omit:    []string{"Sessions"},
 	})
 	if err != nil {
@@ -72,7 +74,7 @@ func (userService *UserService) CreateUser(data *validators.CreateUserValidator)
 	existingUserByUsername, err := userService.userRepo.FindByUsername(data.Username, repository.QueryOptions{
 		Select: []string{"id"},
 	})
-	if err != nil {
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, err
 	}
 
@@ -83,7 +85,7 @@ func (userService *UserService) CreateUser(data *validators.CreateUserValidator)
 	existingUserByEmail, err := userService.userRepo.FindByEmail(data.Email, repository.QueryOptions{
 		Select: []string{"id"},
 	})
-	if err != nil {
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, err
 	}
 
@@ -115,7 +117,7 @@ func (userService *UserService) CreateUser(data *validators.CreateUserValidator)
 				Omit: []string{"created_at", "updated_at", "Roles", "Sessions"},
 			},
 			repository.QueryOptions{
-				Omit: []string{"Permissions"},
+				Omit: []string{"Roles.Permissions"},
 			},
 		)
 		if err != nil {
@@ -126,7 +128,7 @@ func (userService *UserService) CreateUser(data *validators.CreateUserValidator)
 	}
 
 	err2 := userService.userRepo.Create(user, repository.QueryOptions{
-		Omit: []string{"Roles", "Sessions"},
+		Omit: []string{"Sessions"},
 	})
 
 	if err2 != nil {
@@ -188,7 +190,7 @@ func (userService *UserService) UpdateUser(ID string, data *validators.UpdateUse
 				Select: columns,
 			},
 			repository.QueryOptions{
-				Omit: []string{"Permissions"},
+				Omit: []string{"Roles.Permissions"},
 			},
 		)
 		if err != nil {

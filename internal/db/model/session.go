@@ -10,17 +10,17 @@ import (
 
 type Session struct {
 	Base
-	ExpiresOn        time.Time      `gorm:"not null" json:"expires_on"`
-	RefreshExpiresOn *time.Time     `json:"refresh_expires_on"`
-	Type             string         `gorm:"type:varchar(32);not null" json:"session_type"`
-	RememberMe       bool           `gorm:"not null;default:false" json:"remember_me"`
-	AccessToken      string         `gorm:"type:text;not null" json:"access_token"`
-	RefreshToken     *string        `gorm:"type:text" json:"refresh_token"`
+	ExpiresOn        time.Time      `gorm:"not null" json:"-"`
+	RefreshExpiresOn *time.Time     `json:"-"`
+	Type             string         `gorm:"type:varchar(32);not null" json:"-"`
+	RememberMe       bool           `gorm:"not null;default:false" json:"-"`
+	AccessToken      string         `gorm:"type:text;not null" json:"-"`
+	RefreshToken     *string        `gorm:"type:text" json:"-"`
 	IPAddress        string         `gorm:"type:varchar(255);not null" json:"ip_address"`
 	UserAgent        string         `gorm:"type:varchar(255);not null" json:"user_agent"`
-	AdditionalInfo   datatypes.JSON `gorm:"type:jsonb" json:"additional_info"`
+	AdditionalInfo   datatypes.JSON `gorm:"type:jsonb" json:"-"`
 	UserID           string         `gorm:"type:uuid;not null" json:"-"`
-	User             *User          `gorm:"foreignKey:UserID" json:"user"`
+	User             *User          `gorm:"foreignKey:UserID" json:"-"`
 }
 
 func (*Session) createSessionToken() (string, error) {

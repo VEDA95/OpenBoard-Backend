@@ -25,5 +25,5 @@ func (options *QueryOptions) AppendToQuery(db *gorm.DB) *gorm.DB {
 		}
 	}
 
-	return db
+	return query
 }

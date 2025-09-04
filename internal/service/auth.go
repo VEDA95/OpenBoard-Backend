@@ -27,7 +27,7 @@ func NewAuthService(sessionRepo *repository.SessionRepository, userRepo *reposit
 
 func (authService *AuthService) GetUserSessions(ID string) ([]*models.Session, error) {
 	sessions, err := authService.sessionRepo.FindByUser(ID, repository.QueryOptions{
-		Preload: []string{"User.Roles.Permissions"},
+		Preload: []string{"User", "User.Roles", "User.Roles.Permissions"},
 		Omit:    []string{"User.Sessions"},
 	})
 	if err != nil {
@@ -39,16 +39,16 @@ func (authService *AuthService) GetUserSessions(ID string) ([]*models.Session, e
 
 func (authService *AuthService) ValidateSession(token string) (*models.Session, error) {
 	session, err := authService.sessionRepo.FindByAccessToken(token, repository.QueryOptions{
-		Preload: []string{"User.Roles.Permissions"},
-		Omit:    []string{"User.Sessions"},
+		Preload: []string{"User", "User.Roles", "User.Roles.Permissions", "User.Sessions"},
 	})
 	if err != nil {
 		return nil, err
 	}
 
+	isValid := session.IsValid()
 	isRefreshValid := session.IsRefreshValid()
 
-	if !session.IsValid() && !isRefreshValid {
+	if !isValid && !isRefreshValid {
 		if err := authService.sessionRepo.Delete(session.ID); err != nil {
 			return nil, err
 		}
@@ -56,7 +56,7 @@ func (authService *AuthService) ValidateSession(token string) (*models.Session, 
 		return nil, errors.New("invalid credentials")
 	}
 
-	if isRefreshValid {
+	if !isValid && isRefreshValid {
 		return session, errors.New("refresh required")
 	}
 
@@ -82,8 +82,8 @@ func (authService *AuthService) LocalLogin(data *validators.LocalLoginValidator,
 	}
 
 	user, err := authService.userRepo.FindByUsername(data.Username, repository.QueryOptions{
-		Preload: []string{"User.Roles.Permissions"},
-		Omit:    []string{"User.Sessions"},
+		Preload: []string{"Roles", "Roles.Permissions"},
+		Omit:    []string{"Sessions"},
 	})
 	if err != nil {
 		return nil, err
@@ -98,7 +98,7 @@ func (authService *AuthService) LocalLogin(data *validators.LocalLoginValidator,
 	}
 
 	response := &auth.LoginResponse{ExpiresIn: expiresIn}
-	columns := []string{"session_type", "ip_address", "user_agent", "expires_on", "user_id", "access_token"}
+	columns := []string{"id", "type", "ip_address", "user_agent", "expires_on", "user_id", "access_token"}
 	now := time.Now()
 	session := &models.Session{
 		Type:      "local",
@@ -129,7 +129,7 @@ func (authService *AuthService) LocalLogin(data *validators.LocalLoginValidator,
 	}
 
 	err3 := authService.userRepo.Update(user, repository.QueryOptions{
-		Select: []string{"updated_at"},
+		Select: []string{"last_login"},
 	})
 	if err3 != nil {
 		return nil, err3
@@ -160,7 +160,8 @@ func (authService *AuthService) LocalRefresh(token string) (*auth.LoginResponse,
 	}
 
 	session, err := authService.sessionRepo.FindByRefreshToken(token, repository.QueryOptions{
-		Preload: []string{"User.Roles.Permissions", "User.Sessions"},
+		Preload: []string{"User", "User.Roles", "User.Roles.Permissions"},
+		Omit:    []string{"User.Sessions"},
 	})
 	if err != nil {
 		return nil, err
@@ -181,10 +182,9 @@ func (authService *AuthService) LocalRefresh(token string) (*auth.LoginResponse,
 
 	if session.RememberMe {
 		refreshExpiresOn := now.Add(time.Second * time.Duration(refreshExpiresIn))
-		session.RememberMe = true
 		session.RefreshExpiresOn = &refreshExpiresOn
 		response.RefreshExpiresIn = &refreshExpiresIn
-		columns = append(columns, "remember_me", "refresh_expires_on", "refresh_token")
+		columns = append(columns, "refresh_expires_on", "refresh_token")
 	}
 
 	if err := session.GenerateTokens(); err != nil {
@@ -278,7 +278,7 @@ func (authService *AuthService) IssueUserPasswordResetToken(user *models.User, d
 func (authService *AuthService) ResetForgottenPassword(data *validators.ResetPasswordValidator) error {
 	passwordResetToken, err := authService.passwordResetRepo.FindByToken(data.Token, repository.QueryOptions{
 		Preload: []string{"User"},
-		Omit:    []string{"User.Roles", "User.Sessions"},
+		Omit:    []string{"User.Roles", "User.Roles.Permissions", "User.Sessions"},
 	})
 	if err != nil {
 		return err
@@ -314,7 +314,7 @@ func (authService *AuthService) ResetForgottenPassword(data *validators.ResetPas
 
 func (authService *AuthService) ResetUserPassword(user *models.User, data *validators.ResetPasswordValidator) error {
 	passwordResetToken, err := authService.passwordResetRepo.FindByToken(data.Token, repository.QueryOptions{
-		Omit: []string{"User"},
+		Omit: []string{"User", "User.Roles", "User.Roles.Permissions", "User.Sessions"},
 	})
 	if err != nil {
 		return err

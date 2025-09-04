@@ -40,20 +40,26 @@ func (authMiddleware *AuthMiddleware) RequireAuthentication() fiber.Handler {
 		session, err := authMiddleware.service.ValidateSession(token)
 		if err != nil {
 			errString := err.Error()
+			isInvalidCredentials := errString == "invalid credentials"
+			isRefreshRequired := errString == "refresh required"
 
-			if errString == "invalid credentials" && isCookie {
+			if isInvalidCredentials && isCookie {
 				context.ClearCookie("open_board_session_remember_me")
 				context.ClearCookie("open_board_auth_session")
 			}
 
-			if errString == "refresh required" && isCookie {
+			if isRefreshRequired && isCookie {
 				context.ClearCookie("open_board_auth_session")
+			}
+
+			if isInvalidCredentials || isRefreshRequired {
+				return fiber.NewError(fiber.StatusUnauthorized, errString)
 			}
 
 			return err
 		}
 
-		context.Locals("auth_session", session)
+		context.Locals("auth_session", *session)
 
 		return context.Next()
 	}

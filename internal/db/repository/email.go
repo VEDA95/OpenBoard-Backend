@@ -61,7 +61,7 @@ func NewEmailRepository(logger *zerolog.Logger) (*EmailRepository, error) {
 		return nil, err
 	}
 
-	return &EmailRepository{templates: templateFiles}, nil
+	return &EmailRepository{templates: templateFiles, mutex: &sync.RWMutex{}}, nil
 }
 
 func (emailRepo *EmailRepository) GetTemplates() *map[string]string {
@@ -74,8 +74,8 @@ func (emailRepo *EmailRepository) GetTemplate(name string) string {
 	}
 
 	emailRepo.mutex.RLock()
-	templateString, ok := emailRepo.templates[name]
 	emailRepo.mutex.RUnlock()
+	templateString, ok := emailRepo.templates[name]
 
 	if !ok {
 		return ""
@@ -86,8 +86,8 @@ func (emailRepo *EmailRepository) GetTemplate(name string) string {
 
 func (emailRepo *EmailRepository) SetTemplate(name string, content string) {
 	emailRepo.mutex.Lock()
+	defer emailRepo.mutex.Unlock()
 	emailRepo.templates[name] = content
-	emailRepo.mutex.Unlock()
 }
 
 func (emailRepo *EmailRepository) GetSender() string {
@@ -107,6 +107,8 @@ func (emailRepo *EmailRepository) RenderTemplate(name string, variables interfac
 		return ""
 	}
 
+	emailRepo.mutex.RLock()
+	defer emailRepo.mutex.RUnlock()
 	rawTemplate, ok := emailRepo.templates[name]
 
 	if !ok {

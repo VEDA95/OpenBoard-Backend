@@ -37,7 +37,7 @@ func (sessionRepo *SessionRepository) FindByUser(ID string, options QueryOptions
 func (sessionRepo *SessionRepository) FindByID(ID string, options QueryOptions) (*models.Session, error) {
 	session := new(models.Session)
 
-	if err := options.AppendToQuery(sessionRepo.db).First(session, ID).Error; err != nil {
+	if err := options.AppendToQuery(sessionRepo.db).Where("id = ?", ID).First(session).Error; err != nil {
 		return nil, err
 	}
 
@@ -73,7 +73,7 @@ func (sessionRepo *SessionRepository) Update(session *models.Session, options Qu
 }
 
 func (sessionRepo *SessionRepository) Delete(ID string) error {
-	return sessionRepo.db.Delete(&models.Session{}, ID).Error
+	return sessionRepo.db.Where("id = ?", ID).Delete(&models.Session{}).Error
 }
 
 func (sessionRepo *SessionRepository) DeleteByUserID(ID string) error {

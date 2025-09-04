@@ -27,7 +27,7 @@ func (userRepo *UserRepository) FindAll(options QueryOptions) ([]*models.User, e
 func (userRepo *UserRepository) FindByID(ID string, options QueryOptions) (*models.User, error) {
 	user := new(models.User)
 
-	if err := options.AppendToQuery(userRepo.db).First(user, ID).Error; err != nil {
+	if err := options.AppendToQuery(userRepo.db).Where("id = ?", ID).First(user).Error; err != nil {
 		return nil, err
 	}
 

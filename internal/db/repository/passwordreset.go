@@ -27,7 +27,7 @@ func (passwordResetRepo *PasswordResetRepository) FindAll(options QueryOptions) 
 func (passwordResetRepo *PasswordResetRepository) FindByID(ID string, options QueryOptions) (*models.PasswordResetToken, error) {
 	passwordResetToken := new(models.PasswordResetToken)
 
-	if err := options.AppendToQuery(passwordResetRepo.db).First(passwordResetToken, ID).Error; err != nil {
+	if err := options.AppendToQuery(passwordResetRepo.db).Where("id = ?", ID).First(passwordResetToken).Error; err != nil {
 		return nil, err
 	}
 

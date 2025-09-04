@@ -27,7 +27,7 @@ func (roleRepo *RoleRepository) FindAll(options QueryOptions) ([]*models.Role, e
 func (roleRepo *RoleRepository) FindByID(ID string, options QueryOptions) (*models.Role, error) {
 	role := new(models.Role)
 
-	if err := options.AppendToQuery(roleRepo.db).First(role, ID).Error; err != nil {
+	if err := options.AppendToQuery(roleRepo.db).Where("id = ?", ID).First(role).Error; err != nil {
 		return nil, err
 	}
 

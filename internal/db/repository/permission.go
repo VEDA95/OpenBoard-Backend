@@ -37,7 +37,7 @@ func (permissionRepo *PermissionRepository) FindByPaths(paths []string, options 
 func (permissionRepo *PermissionRepository) FindByID(ID string, options QueryOptions) (*models.Permission, error) {
 	permission := new(models.Permission)
 
-	if err := options.AppendToQuery(permissionRepo.db).First(permission, ID).Error; err != nil {
+	if err := options.AppendToQuery(permissionRepo.db).Where("id = ?", ID).First(permission).Error; err != nil {
 		return nil, err
 	}
 
