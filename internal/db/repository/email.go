@@ -1,13 +1,12 @@
 package repository
 
 import (
+	"VEDA95/open_board/api/internal/log"
 	"bytes"
 	"html/template"
 	"os"
 	"path/filepath"
 	"sync"
-
-	"github.com/rs/zerolog"
 )
 
 type EmailRepository struct {
@@ -16,7 +15,7 @@ type EmailRepository struct {
 	mutex     *sync.RWMutex
 }
 
-func NewEmailRepository(logger *zerolog.Logger) (*EmailRepository, error) {
+func NewEmailRepository() (*EmailRepository, error) {
 	templateFiles := make(map[string]string)
 
 	err := filepath.Walk("./internal/email/templates/build/", func(path string, info os.FileInfo, err error) error {
@@ -35,7 +34,7 @@ func NewEmailRepository(logger *zerolog.Logger) (*EmailRepository, error) {
 
 		defer func() {
 			if err := file.Close(); err != nil {
-				logger.Panic().Err(err).Msg("unable to close file")
+				log.Global.Panic().Err(err).Msg("unable to close file")
 			}
 		}()
 
@@ -74,7 +73,7 @@ func (emailRepo *EmailRepository) GetTemplate(name string) string {
 	}
 
 	emailRepo.mutex.RLock()
-	emailRepo.mutex.RUnlock()
+	defer emailRepo.mutex.RUnlock()
 	templateString, ok := emailRepo.templates[name]
 
 	if !ok {

@@ -247,6 +247,8 @@ func (authService *AuthService) IssueForgotPasswordToken(email string) (*models.
 		return nil, err2
 	}
 
+	passwordResetToken.User = *user
+
 	return passwordResetToken, nil
 }
 

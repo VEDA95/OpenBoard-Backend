@@ -23,8 +23,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	logger, err := appLogger.NewLogger()
-	if err != nil {
+	if err := appLogger.InitializeGlobal(); err != nil {
 		log.Fatal(err)
 	}
 
@@ -46,13 +45,13 @@ func main() {
 		envType = "development"
 	}
 
-	dbInstance, err := db.NewDB(logger)
+	dbInstance, err := db.NewDB()
 	if err != nil {
 		if envType == "production" {
 			fmt.Println(errorMessage)
 		}
 
-		logger.Fatal().Err(err).Msg("An error occurred when setting up the database connection")
+		appLogger.Global.Fatal().Err(err).Msg("An error occurred when setting up the database connection")
 	}
 
 	userRepo := repository.NewUserRepository(dbInstance)
@@ -83,7 +82,7 @@ func main() {
 			}
 		}
 
-		logger.Fatal().Interface("errors", errs).Msg("The following validation errors occurred")
+		appLogger.Global.Fatal().Interface("errors", errs).Msg("The following validation errors occurred")
 	}
 
 	var userCount int64
@@ -92,7 +91,7 @@ func main() {
 			fmt.Println(errorMessage)
 		}
 
-		logger.Fatal().Err(err).Msg("An error occurred during the user creation process")
+		appLogger.Global.Fatal().Err(err).Msg("An error occurred during the user creation process")
 	}
 
 	existingUserByUsername, err := userRepo.FindByUsername(validatorData.Username, repository.QueryOptions{
@@ -103,7 +102,7 @@ func main() {
 			fmt.Println(errorMessage)
 		}
 
-		logger.Fatal().Err(err).Msg("An error occurred when checking if user already exists")
+		appLogger.Global.Fatal().Err(err).Msg("An error occurred when checking if user already exists")
 	}
 
 	if existingUserByUsername != nil {
@@ -113,7 +112,7 @@ func main() {
 			fmt.Print(err.Error())
 		}
 
-		logger.Fatal().Err(err).Msg("An error occurred when checking if the user already exists")
+		appLogger.Global.Fatal().Err(err).Msg("An error occurred when checking if the user already exists")
 	}
 
 	existingUserByEmail, err := userRepo.FindByEmail(validatorData.Email, repository.QueryOptions{
@@ -124,7 +123,7 @@ func main() {
 			fmt.Println(errorMessage)
 		}
 
-		logger.Fatal().Err(err).Msg("An error occurred when checking if user already exists")
+		appLogger.Global.Fatal().Err(err).Msg("An error occurred when checking if user already exists")
 	}
 
 	if existingUserByEmail != nil {
@@ -134,7 +133,7 @@ func main() {
 			fmt.Print(err.Error())
 		}
 
-		logger.Fatal().Err(err).Msg("An error occurred when checking if the user already exists")
+		appLogger.Global.Fatal().Err(err).Msg("An error occurred when checking if the user already exists")
 	}
 
 	userRoleNames := slices.Clone(splitRoles)
@@ -158,7 +157,7 @@ func main() {
 			fmt.Println(errorMessage)
 		}
 
-		logger.Fatal().Err(err).Msg("An error occurred while hashing user password")
+		appLogger.Global.Fatal().Err(err).Msg("An error occurred while hashing user password")
 	}
 
 	userRoles := make([]*models.Role, 0)
@@ -167,7 +166,7 @@ func main() {
 			fmt.Println(err)
 		}
 
-		logger.Fatal().Err(err).Msg("An error occurred when fetching roles for user creation")
+		appLogger.Global.Fatal().Err(err).Msg("An error occurred when fetching roles for user creation")
 	}
 
 	userRoleIDs := make([]string, len(userRoles))
@@ -182,7 +181,7 @@ func main() {
 			fmt.Println(errorMessage)
 		}
 
-		logger.Fatal().Err(err).Msg("An error occurred during the user creation process")
+		appLogger.Global.Fatal().Err(err).Msg("An error occurred during the user creation process")
 	}
 
 	fmt.Printf("user %s was successfully created!!!\n", user.Username)

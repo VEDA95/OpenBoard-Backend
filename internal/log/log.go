@@ -9,6 +9,8 @@ import (
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
+var Global *zerolog.Logger
+
 func NewLogger() (*zerolog.Logger, error) {
 	if os.Getenv("ENV_TYPE") == "development" {
 		logger := zerolog.New(os.Stdout).
@@ -41,4 +43,14 @@ func NewLogger() (*zerolog.Logger, error) {
 		Logger()
 
 	return &logger, nil
+}
+
+func InitializeGlobal() error {
+	logger, err := NewLogger()
+	if err != nil {
+		return err
+	}
+
+	Global = logger
+	return nil
 }

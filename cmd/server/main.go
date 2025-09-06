@@ -49,28 +49,27 @@ func main() {
 		hostString = fmt.Sprintf("%s:%s", host, port)
 	}
 
-	logger, err := applogger.NewLogger()
-	if err != nil {
+	if err := applogger.InitializeGlobal(); err != nil {
 		log.Fatal(err)
 	}
 
-	dbInstance, err := db.NewDB(logger)
+	dbInstance, err := db.NewDB()
 	if err != nil {
-		logger.Fatal().Err(err).Msg("")
+		applogger.Global.Fatal().Err(err).Msg("")
 	}
 
-	emailRepo, err := repository.NewEmailRepository(logger)
+	emailRepo, err := repository.NewEmailRepository()
 	if err != nil {
-		logger.Fatal().Err(err).Msg("")
+		applogger.Global.Fatal().Err(err).Msg("")
 	}
 
 	emailService, err := service.NewEmailService(emailRepo)
 	if err != nil {
 		if !strings.Contains(err.Error(), "required email settings are missing") {
-			logger.Fatal().Err(err).Msg("")
+			applogger.Global.Fatal().Err(err).Msg("")
 		}
 
-		logger.Warn().Err(err).Msg("")
+		applogger.Global.Warn().Err(err).Msg("")
 	}
 
 	userRepo := repository.NewUserRepository(dbInstance)
@@ -90,14 +89,14 @@ func main() {
 	authMiddleware := middleware.NewAuthMiddleware(authService)
 
 	app := fiber.New(fiber.Config{
-		ErrorHandler: errors.ErrorHandler(logger),
+		ErrorHandler: errors.ErrorHandler,
 		JSONEncoder:  json.Marshal,
 		JSONDecoder:  json.Unmarshal,
 	})
 	apiGroup := app.Group("/api")
 	authGroup := app.Group("/auth")
 
-	app.Use(fiberzerolog.New(fiberzerolog.Config{Logger: logger}))
+	app.Use(fiberzerolog.New(fiberzerolog.Config{Logger: applogger.Global}))
 	app.Use(cors.New(cors.Config{
 		AllowOrigins:     "http://localhost:3000",
 		AllowMethods:     "GET, POST, PUT, PATCH, DELETE",
@@ -134,6 +133,6 @@ func main() {
 	apiGroup.Delete("/users/:id", userHandler.DELETE)
 
 	if err := app.Listen(hostString); err != nil {
-		logger.Fatal().Err(err).Msg("Error occurred while running the server")
+		applogger.Global.Fatal().Err(err).Msg("Error occurred while running the server")
 	}
 }

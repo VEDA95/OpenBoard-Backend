@@ -1,17 +1,17 @@
 package db
 
 import (
+	"VEDA95/open_board/api/internal/log"
 	"errors"
 	"os"
 	"time"
 
-	"github.com/rs/zerolog"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
 
-func NewDB(appLogger *zerolog.Logger) (*gorm.DB, error) {
+func NewDB() (*gorm.DB, error) {
 	dsn := os.Getenv("DATABASE_URL")
 	envType := os.Getenv("ENV_TYPE")
 
@@ -19,7 +19,7 @@ func NewDB(appLogger *zerolog.Logger) (*gorm.DB, error) {
 		return nil, errors.New("DATABASE_URL not set")
 	}
 
-	gormLogger := NewGormZerologger(appLogger)
+	gormLogger := NewGormZerologger(log.Global)
 
 	var logLevel logger.LogLevel
 	if envType == "production" {

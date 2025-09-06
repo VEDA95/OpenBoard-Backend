@@ -18,8 +18,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	logger, err := appLogger.NewLogger()
-	if err != nil {
+	if err := appLogger.InitializeGlobal(); err != nil {
 		log.Fatal(err)
 	}
 
@@ -35,13 +34,13 @@ func main() {
 		envType = "development"
 	}
 
-	dbInstance, err := db.NewDB(logger)
+	dbInstance, err := db.NewDB()
 	if err != nil {
 		if envType == "production" {
 			fmt.Println(errorMessage)
 		}
 
-		logger.Fatal().Err(err).Msg("An error occurred when setting up the database connection")
+		appLogger.Global.Fatal().Err(err).Msg("An error occurred when setting up the database connection")
 	}
 
 	userRepo := repository.NewUserRepository(dbInstance)
@@ -62,7 +61,7 @@ func main() {
 			}
 		}
 
-		logger.Fatal().Err(errors.CreateValidationError(errs)).Msg("An error occurred during validation")
+		appLogger.Global.Fatal().Err(errors.CreateValidationError(errs)).Msg("An error occurred during validation")
 	}
 
 	user, err := userRepo.FindByUsername(validatorData.Username, repository.QueryOptions{
@@ -73,7 +72,7 @@ func main() {
 			fmt.Println(errorMessage)
 		}
 
-		logger.Fatal().Err(err).Msg("An error occurred while fetching the user")
+		appLogger.Global.Fatal().Err(err).Msg("An error occurred while fetching the user")
 	}
 
 	if err := user.HashPassword(validatorData.Password); err != nil {
@@ -81,7 +80,7 @@ func main() {
 			fmt.Println(errorMessage)
 		}
 
-		logger.Fatal().Err(err).Msg("An error occurred while hashing the user password")
+		appLogger.Global.Fatal().Err(err).Msg("An error occurred while hashing the user password")
 	}
 
 	if err := userRepo.Update(user, repository.QueryOptions{Select: []string{"hashed_password"}}); err != nil {
@@ -89,7 +88,7 @@ func main() {
 			fmt.Println(errorMessage)
 		}
 
-		logger.Fatal().Err(err).Msg("An error occurred when updating user password")
+		appLogger.Global.Fatal().Err(err).Msg("An error occurred when updating user password")
 	}
 
 	if err := sessionRepo.DeleteByUserID(user.ID); err != nil {
@@ -97,7 +96,7 @@ func main() {
 			fmt.Println(errorMessage)
 		}
 
-		logger.Fatal().Err(err).Msg("An error occurred while deleting user sessions")
+		appLogger.Global.Fatal().Err(err).Msg("An error occurred while deleting user sessions")
 	}
 
 	fmt.Printf("The password for user %s has been reset successfully!!!\n", user.Username)
