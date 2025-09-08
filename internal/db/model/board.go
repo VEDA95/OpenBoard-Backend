@@ -9,4 +9,5 @@ type Board struct {
 	User        *User         `gorm:"foreignKey:UserID" json:"user,omitempty"`
 	Workspace   *Worksapce    `gorm:"foreignKey:WorksapceID" json:"workspace,omitempty"`
 	Permissions []*Permission `gorm:"many2many:board_permissions" json:"permissions"`
+	Lists       []*List       `gorm:"foreignKey:BoardID" json:"lists"`
 }
