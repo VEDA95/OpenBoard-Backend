@@ -112,11 +112,7 @@ func (topicStore *WebsocketTopicStore) Has(topic string) bool {
 	topicStore.mutex.RLock()
 	defer topicStore.mutex.RUnlock()
 
-	if !topicStore.topics[topic] {
-		return false
-	}
-
-	return true
+	return topicStore.topics[topic]
 }
 
 func (topicStore *WebsocketTopicStore) Set(topic string) {
