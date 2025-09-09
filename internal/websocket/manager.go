@@ -99,6 +99,7 @@ func (connectionManager *WebsocketConnectionManager) ListenToConnection() fiber.
 				connection.AuthData.AccessToken = session.AccessToken
 				connection.AuthData.Autheticated = true
 
+				go connectionManager.checkUserSession(connection)
 				go func() {
 					successMessage := "auth check successful!"
 					if err := connection.Conncection.WriteJSON(WebsocketMessage{Type: "auth", Message: &successMessage}); err != nil {
