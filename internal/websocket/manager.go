@@ -27,9 +27,11 @@ func NewWebsocketConnectionManager(authService *service.AuthService, validator *
 }
 
 func (connectionManager *WebsocketConnectionManager) checkUserSession(connection *WebsocketConnection) {
-	for {
-		time.Sleep(time.Minute * 15)
+	ticker := time.NewTicker(time.Minute * 15)
 
+	defer ticker.Stop()
+
+	for range ticker.C {
 		_, err := connectionManager.authService.ValidateSession(connection.AuthData.AccessToken)
 		if err == nil {
 			continue
