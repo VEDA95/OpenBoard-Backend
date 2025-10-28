@@ -32,6 +32,11 @@ func (workspaceRepo *WorkspaceRepository) FindByID(ID string, options QueryOptio
 	return workspace, nil
 }
 
+func (workspaceRepo *WorkspaceRepository) FindByUserID(ID string, options QueryOptions) ([]*models.Worksapce, error) {
+	workspaces := make([]*models.Worksapce, 0)
+	if err := options.AppendToQuery(workspaceRepo.db).Where("user_id = ?", args ...interface{})
+}
+
 func (workspaceRepo *WorkspaceRepository) Create(workspace *models.Worksapce, options QueryOptions) error {
 	return options.AppendToQuery(workspaceRepo.db).Create(workspace).Error
 }
