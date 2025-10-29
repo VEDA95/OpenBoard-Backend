@@ -34,7 +34,12 @@ func (workspaceRepo *WorkspaceRepository) FindByID(ID string, options QueryOptio
 
 func (workspaceRepo *WorkspaceRepository) FindByUserID(ID string, options QueryOptions) ([]*models.Worksapce, error) {
 	workspaces := make([]*models.Worksapce, 0)
-	if err := options.AppendToQuery(workspaceRepo.db).Where("user_id = ?", args ...interface{})
+
+	if err := options.AppendToQuery(workspaceRepo.db).Where("user_id = ?", ID).Find(&workspaces).Error; err != nil {
+		return nil, err
+	}
+
+	return workspaces, nil
 }
 
 func (workspaceRepo *WorkspaceRepository) Create(workspace *models.Worksapce, options QueryOptions) error {
@@ -81,4 +86,20 @@ func (workspaceRepo *WorkspaceRepository) UpdateWithPermissions(workspace *model
 
 func (workspaceRepo *WorkspaceRepository) Delete(ID string) error {
 	return workspaceRepo.db.Where("id = ?", ID).Delete(models.Worksapce{}).Error
+}
+
+func (workspaceRepo *WorkspaceRepository) Exists(ID string) bool {
+	exists := false
+
+	workspaceRepo.db.Raw("SELECT EXISTS(SELECT 1 FROM workspaces WHERE id = ?) AS found", ID).Find(&exists)
+
+	return exists
+}
+
+func (workspaceRepo *WorkspaceRepository) ExistsForUserByName(ID string, name string) bool {
+	exists := false
+
+	workspaceRepo.db.Raw("SELECT EXISTS(SELECT 1 FROM workspaces WHERE user_id = ? AND name = ?) AS found", ID, name).Find(&exists)
+
+	return exists
 }
