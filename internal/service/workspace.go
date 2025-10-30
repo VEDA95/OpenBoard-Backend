@@ -1,10 +1,11 @@
 package service
 
 import (
+	"errors"
+
 	models "VEDA95/open_board/api/internal/db/model"
 	"VEDA95/open_board/api/internal/db/repository"
 	"VEDA95/open_board/api/internal/http/validators"
-	"errors"
 )
 
 type WorkspaceService struct {
@@ -19,7 +20,7 @@ func NewWorkspaceService(workspaceRepository *repository.WorkspaceRepository) *W
 
 func (workspaceService *WorkspaceService) GetWorkspaces() ([]*models.Worksapce, error) {
 	workspaces, err := workspaceService.workspaceRepository.FindAll(repository.QueryOptions{
-		Preload: []string{"User", "Permissions", "Board"},
+		Preload: []string{"User", "Permissions", "Boards"},
 		Omit:    []string{"UserID"},
 	})
 	if err != nil {
@@ -31,7 +32,7 @@ func (workspaceService *WorkspaceService) GetWorkspaces() ([]*models.Worksapce, 
 
 func (workspaceService *WorkspaceService) GetWorkspaceByID(ID string) (*models.Worksapce, error) {
 	workspace, err := workspaceService.workspaceRepository.FindByID(ID, repository.QueryOptions{
-		Preload: []string{"User", "Permissions", "Board"},
+		Preload: []string{"User", "Permissions", "Boards"},
 		Omit:    []string{"UserID"},
 	})
 	if err != nil {
@@ -43,7 +44,7 @@ func (workspaceService *WorkspaceService) GetWorkspaceByID(ID string) (*models.W
 
 func (workspaceService *WorkspaceService) GetWorkspaceByUserID(ID string) ([]*models.Worksapce, error) {
 	workspaces, err := workspaceService.workspaceRepository.FindByUserID(ID, repository.QueryOptions{
-		Preload: []string{"User", "Permissions", "Board"},
+		Preload: []string{"User", "Permissions", "Boards"},
 		Omit:    []string{"UserID"},
 	})
 	if err != nil {
@@ -54,7 +55,7 @@ func (workspaceService *WorkspaceService) GetWorkspaceByUserID(ID string) ([]*mo
 }
 
 func (workspaceService *WorkspaceService) CreateWorkspace(data *validators.CreateWorkspaceValidator) (*models.Worksapce, error) {
-	if !workspaceService.workspaceRepository.ExistsForUserByName(data.UserID, data.Name) {
+	if workspaceService.workspaceRepository.ExistsForUserByName(data.UserID, data.Name) {
 		return nil, errors.New("workspace already exists")
 	}
 
@@ -69,7 +70,7 @@ func (workspaceService *WorkspaceService) CreateWorkspace(data *validators.Creat
 			workspace,
 			*data.PermissionIDs,
 			repository.QueryOptions{
-				Preload: []string{"User", "Permissions", "Board"},
+				Preload: []string{"User", "Permissions", "Boards"},
 				Omit:    []string{"UserID"},
 			},
 			repository.QueryOptions{},
@@ -84,7 +85,7 @@ func (workspaceService *WorkspaceService) CreateWorkspace(data *validators.Creat
 	err := workspaceService.workspaceRepository.Create(
 		workspace,
 		repository.QueryOptions{
-			Preload: []string{"User", "Permissions", "Board"},
+			Preload: []string{"User", "Permissions", "Boards"},
 			Omit:    []string{"UserID"},
 		},
 	)
@@ -122,7 +123,7 @@ func (workspaceService *WorkspaceService) UpdateWorkspace(ID string, data *valid
 			workspace,
 			*data.PermissionIDs,
 			repository.QueryOptions{
-				Preload: []string{"User", "Permissions", "Board"},
+				Preload: []string{"User", "Permissions", "Boards"},
 				Omit:    []string{"UserID"},
 			},
 			repository.QueryOptions{},
@@ -137,7 +138,7 @@ func (workspaceService *WorkspaceService) UpdateWorkspace(ID string, data *valid
 	err2 := workspaceService.workspaceRepository.Update(
 		workspace,
 		repository.QueryOptions{
-			Preload: []string{"User", "Permissions", "Board"},
+			Preload: []string{"User", "Permissions", "Boards"},
 			Omit:    []string{"UserID"},
 		},
 	)
