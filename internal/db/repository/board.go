@@ -32,6 +32,16 @@ func (boardRepo *BoardRepository) FindByID(ID string, options QueryOptions) (*mo
 	return board, nil
 }
 
+func (boardRepo *BoardRepository) FindByUserID(ID string, options QueryOptions) ([]*models.Board, error) {
+	boards := make([]*models.Board, 0)
+
+	if err := options.AppendToQuery(boardRepo.db).Where("user_id = ?", ID).Find(&boards).Error; err != nil {
+		return nil, err
+	}
+
+	return boards, nil
+}
+
 func (boardRepo *BoardRepository) Create(board *models.Board, options QueryOptions) error {
 	return boardRepo.db.Transaction(func(transaction *gorm.DB) error {
 		if err := options.AppendToQuery(transaction).Create(board).Error; err != nil {
@@ -100,4 +110,20 @@ func (boardRepo *BoardRepository) UpdateWithPermissions(board *models.Board, per
 
 func (boardRepo *BoardRepository) Delete(ID string) error {
 	return boardRepo.db.Where("id = ?", ID).Delete(models.Board{}).Error
+}
+
+func (boardRepo *BoardRepository) Exists(ID string) bool {
+	exists := false
+
+	boardRepo.db.Raw("SELECT EXISTS(SELECT 1 FROM boards WHERE id = ?) AS found", ID).Find(&exists)
+
+	return exists
+}
+
+func (boardRepo *BoardRepository) ExistsForUserByName(ID string, name string) bool {
+	exists := false
+
+	boardRepo.db.Raw("SELECT EXISTS(SELECT 1 FROM boards WHERE id = ? AND name = ?) AS found", ID, name).Find(&exists)
+
+	return exists
 }
