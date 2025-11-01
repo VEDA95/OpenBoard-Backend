@@ -76,7 +76,7 @@ func (cardRepo *CardRepository) Update(card *models.Card, options QueryOptions) 
 	return options.AppendToQuery(cardRepo.db).Save(card).Error
 }
 
-func (cardRepo *CardRepository) UpdateWithAssociations(card *models.Card, labelIDs *[]string, attachmentIDs *[]string, options *QueryOptions, labelOptions *QueryOptions, attachmentOptions *QueryOptions) error {
+func (cardRepo *CardRepository) UpdateWithAssociations(card *models.Card, labelIDs *[]string, attachmentIDs *[]string, options QueryOptions, labelOptions QueryOptions, attachmentOptions QueryOptions) error {
 	if labelIDs == nil && attachmentIDs == nil {
 		return options.AppendToQuery(cardRepo.db).Save(card).Error
 	}
@@ -114,4 +114,12 @@ func (cardRepo *CardRepository) UpdateWithAssociations(card *models.Card, labelI
 
 func (cardRepo *CardRepository) Delete(ID string) error {
 	return cardRepo.db.Where("id = ?", ID).Delete(models.Card{}).Error
+}
+
+func (cardRepo *CardRepository) Exists(ID string) bool {
+	exists := false
+
+	cardRepo.db.Raw("SELECT EXISTS(SELECT 1 FROM cards WHERE id = ?) AS found", ID).Find(&exists)
+
+	return exists
 }

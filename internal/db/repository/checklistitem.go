@@ -40,6 +40,25 @@ func (checkListItemRepo *CheckListItemRepository) Update(checkListItem *models.C
 	return options.AppendToQuery(checkListItemRepo.db).Save(checkListItem).Error
 }
 
+func (checkListRepo *CheckListItemRepository) UpdatePositions(ID string, positions map[string]int) error {
+	return checkListRepo.db.Transaction(func(transaction *gorm.DB) error {
+		for checkListItemID, position := range positions {
+			if err := transaction.Model(&models.CheckListItem{}).Where("id = ? AND card_id = ?", checkListItemID, ID).Update("position", position).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
 func (checkListItemRepo *CheckListItemRepository) Delete(ID string) error {
 	return checkListItemRepo.db.Where("id = ?", ID).Delete(models.CheckListItem{}).Error
+}
+
+func (checkListItemRepo *CheckListItemRepository) Exists(ID string) bool {
+	exists := false
+
+	checkListItemRepo.db.Raw("SELECT EXISTS(SELECT 1 FROM check_list_items WHERE id = ?) AS found", ID).Find(&exists)
+
+	return exists
 }

@@ -61,3 +61,11 @@ func (commentRepo *CommentRepository) Update(comment *models.Comment, options Qu
 func (commentRepo *CommentRepository) Delete(ID string) error {
 	return commentRepo.db.Where("id = ?", ID).Delete(models.Comment{}).Error
 }
+
+func (commentRepo *CommentRepository) Exists(ID string) bool {
+	exists := false
+
+	commentRepo.db.Raw("SELECT EXISTS(SELECT 1 FROM comments WHERE id = ?) AS found", ID).Find(&exists)
+
+	return exists
+}

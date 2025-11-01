@@ -52,3 +52,11 @@ func (labelRepo *LabelRepository) Update(label *models.Label, options QueryOptio
 func (labelRepo *LabelRepository) Delete(ID string) error {
 	return labelRepo.db.Where("id = ?", ID).Delete(models.Label{}).Error
 }
+
+func (labelRepo *LabelRepository) Exists(ID string) bool {
+	exists := false
+
+	labelRepo.db.Raw("SELECT EXISTS(SELECT 1 FROM lists WHERE id = ?) AS found", ID).Find(&exists)
+
+	return exists
+}
