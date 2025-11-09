@@ -67,7 +67,7 @@ func (boardService *BoardService) GetUserAccessibleBoards(user *models.User) ([]
 	boards := make([]*models.Board, 0)
 
 	for _, board := range allBoards {
-		if board.IsPublic || board.User.ID == user.ID {
+		if board.IsPublic || board.User.ID == user.ID || board.Workspace.User.ID == user.ID {
 			boards = append(boards, board)
 			continue
 		}
@@ -99,7 +99,7 @@ func (boardService *BoardService) GetUserAccessibleBoardByID(ID string, user *mo
 		permissionPaths[index] = permission.Path
 	}
 
-	if !user.IsSuperuser() && (board.User.ID != user.ID || !user.IsAuthorizedPartial(permissionPaths...)) {
+	if !user.IsSuperuser() && (board.User.ID != user.ID || board.Workspace.User.ID != user.ID || !user.IsAuthorizedPartial(permissionPaths...)) {
 		return nil, errors.New("unauthorized")
 	}
 
@@ -146,7 +146,7 @@ func (boardService *BoardService) CreateBoard(data *validators.CreateBoardValida
 	return board, nil
 }
 
-func (boardService *BoardService) UpdateBoard(ID string, data *validators.UpdateBoardValidator) (*models.Board, error) {
+func (boardService *BoardService) UpdateBoard(ID string, user *models.User, data *validators.UpdateBoardValidator) (*models.Board, error) {
 	if !boardService.boardRepository.Exists(ID) {
 		return nil, errors.New("board does not exist")
 	}
@@ -159,23 +159,60 @@ func (boardService *BoardService) UpdateBoard(ID string, data *validators.Update
 		return nil, err
 	}
 
+	insufficientPermission := (board.UserID != user.ID) &&
+		(board.Workspace == nil || board.Workspace.UserID != user.ID) &&
+		(!user.IsSuperuser() && !user.IsAuthorized("boards:manage_all"))
+
+	if insufficientPermission {
+		if len(board.Permissions) > 0 {
+			permissionPaths := make([]string, len(board.Permissions))
+
+			for index, permission := range board.Permissions {
+				permissionPaths[index] = permission.Path
+			}
+
+			if !user.IsAuthorizedPartial(permissionPaths...) {
+				return nil, errors.New("unauthorized: no permission to update this board")
+			}
+
+		}
+
+		return nil, errors.New("unauthorized: no permission to update this board")
+	}
+
 	if data.Name != nil && *data.Name != board.Name {
 		board.Name = *data.Name
 	}
 
 	if data.IsPublic != nil && *data.IsPublic != board.IsPublic {
+		if insufficientPermission {
+			return nil, errors.New("unauthorized: only admins and owners can switch this board to public")
+		}
+
 		board.IsPublic = *data.IsPublic
 	}
 
 	if data.UserID != nil && *data.UserID != board.UserID {
+		if insufficientPermission {
+			return nil, errors.New("unauthorized: only admins, managers, and owners can transfer ownership of this board to another user")
+		}
+
 		board.UserID = *data.UserID
 	}
 
 	if data.WorkspaceID != nil && *data.WorkspaceID != board.WorksapceID {
+		if insufficientPermission {
+			return nil, errors.New("unauthorized: only admins, managers, and owners can transfer this board to another workspace")
+		}
+
 		board.WorksapceID = *data.WorkspaceID
 	}
 
 	if data.PermissionIDs != nil && len(*data.PermissionIDs) > 0 {
+		if insufficientPermission {
+			return nil, errors.New("unauthorized: only admins, managers, and owners can update permissions for this board")
+		}
+
 		err := boardService.boardRepository.UpdateWithPermissions(
 			board,
 			*data.PermissionIDs,

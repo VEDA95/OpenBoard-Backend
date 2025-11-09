@@ -18,6 +18,33 @@ func NewWorkspaceService(workspaceRepository *repository.WorkspaceRepository) *W
 	}
 }
 
+func (workspaceService *WorkspaceService) filterWorkspaceBoards(user *models.User, workspace *models.Worksapce) []*models.Board {
+	if user.IsSuperuser() || workspace.User.ID == user.ID || len(workspace.Boards) == 0 {
+		return workspace.Boards
+	}
+
+	boards := make([]*models.Board, 0)
+
+	for _, board := range workspace.Boards {
+		if board.User.ID == user.ID {
+			boards = append(boards, board)
+			continue
+		}
+
+		permissionPaths := make([]string, len(board.Permissions))
+
+		for index, permission := range board.Permissions {
+			permissionPaths[index] = permission.Path
+		}
+
+		if user.IsAuthorizedPartial(permissionPaths...) {
+			boards = append(boards, board)
+		}
+	}
+
+	return boards
+}
+
 func (workspaceService *WorkspaceService) GetWorkspaces() ([]*models.Worksapce, error) {
 	workspaces, err := workspaceService.workspaceRepository.FindAll(repository.QueryOptions{
 		Preload: []string{"User", "Permissions", "Boards"},
@@ -63,6 +90,8 @@ func (workspaceService *WorkspaceService) GetUserAccessibleWorkspaceByID(ID stri
 		}
 	}
 
+	workspace.Boards = workspaceService.filterWorkspaceBoards(user, workspace)
+
 	return workspace, nil
 }
 
@@ -92,6 +121,7 @@ func (workspaceService *WorkspaceService) GetUserAccessibleWorkspaces(user *mode
 
 	for _, workspace := range allWorkspaces {
 		if workspace.IsPublic || workspace.User.ID == user.ID {
+			workspace.Boards = workspaceService.filterWorkspaceBoards(user, workspace)
 			workspaces = append(workspaces, workspace)
 			continue
 		}
@@ -103,8 +133,8 @@ func (workspaceService *WorkspaceService) GetUserAccessibleWorkspaces(user *mode
 		}
 
 		if user.IsAuthorizedPartial(permissionPaths...) {
+			workspace.Boards = workspaceService.filterWorkspaceBoards(user, workspace)
 			workspaces = append(workspaces, workspace)
-			continue
 		}
 	}
 
@@ -120,6 +150,7 @@ func (workspaceService *WorkspaceService) CreateWorkspace(data *validators.Creat
 		UserID:      data.UserID,
 		Name:        data.Name,
 		Description: data.Description,
+		IsPublic:    data.IsPublic,
 	}
 
 	if data.PermissionIDs != nil && len(*data.PermissionIDs) > 0 {
@@ -153,7 +184,7 @@ func (workspaceService *WorkspaceService) CreateWorkspace(data *validators.Creat
 	return workspace, nil
 }
 
-func (workspaceService *WorkspaceService) UpdateWorkspace(ID string, data *validators.UpdateWorkspaceValidator) (*models.Worksapce, error) {
+func (workspaceService *WorkspaceService) UpdateWorkspace(ID string, user *models.User, data *validators.UpdateWorkspaceValidator) (*models.Worksapce, error) {
 	if !workspaceService.workspaceRepository.Exists(ID) {
 		return nil, errors.New("workspace does not exist")
 	}
@@ -161,6 +192,13 @@ func (workspaceService *WorkspaceService) UpdateWorkspace(ID string, data *valid
 	workspace, err := workspaceService.workspaceRepository.FindByID(ID, repository.QueryOptions{})
 	if err != nil {
 		return nil, err
+	}
+
+	isOwner := workspace.UserID == user.ID
+	canManage := user.IsSuperuser() || user.IsAuthorized("workspaces:manage_all")
+
+	if !isOwner && !canManage {
+		return nil, errors.New("unauthorized: no permission to update this workspace")
 	}
 
 	if data.Name != nil && *data.Name != workspace.Name {
@@ -173,6 +211,10 @@ func (workspaceService *WorkspaceService) UpdateWorkspace(ID string, data *valid
 
 	if data.UserID != nil && *data.UserID != workspace.UserID {
 		workspace.UserID = *data.UserID
+	}
+
+	if data.IsPublic != nil && *data.IsPublic != workspace.IsPublic {
+		workspace.IsPublic = *data.IsPublic
 	}
 
 	if data.PermissionIDs != nil {

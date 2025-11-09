@@ -89,7 +89,8 @@ func (workspaceHandler *WorkspaceHandler) PATCH(context *fiber.Ctx) error {
 		return errors.CreateValidationError(errs)
 	}
 
-	workspace, err := workspaceHandler.workspaceService.UpdateWorkspace(params.Id, validatorData)
+	session := context.Locals("auth_session").(models.Session)
+	workspace, err := workspaceHandler.workspaceService.UpdateWorkspace(params.Id, session.User, validatorData)
 	if err != nil {
 		return err
 	}
