@@ -1,9 +1,10 @@
 package middleware
 
 import (
+	"strings"
+
 	models "VEDA95/open_board/api/internal/db/model"
 	"VEDA95/open_board/api/internal/service"
-	"strings"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -77,22 +78,12 @@ func (*AuthMiddleware) RequireAuthorization(permissions ...string) fiber.Handler
 			return fiber.NewError(fiber.StatusUnauthorized, "unauthorized")
 		}
 
-		permissionMap := make(map[string]bool)
-
-		for _, role := range session.User.Roles {
-			for _, permission := range role.Permissions {
-				permissionMap[permission.Path] = true
-			}
-		}
-
-		if permissionMap["auth:superuser"] {
+		if session.User.IsSuperuser() {
 			return context.Next()
 		}
 
-		for _, permission := range permissions {
-			if !permissionMap[permission] {
-				return fiber.NewError(fiber.StatusUnauthorized, "unauthorized")
-			}
+		if !session.User.IsAuthorized(permissions...) {
+			return fiber.NewError(fiber.StatusUnauthorized, "unauthorized")
 		}
 
 		return context.Next()

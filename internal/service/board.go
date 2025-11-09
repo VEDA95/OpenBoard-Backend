@@ -54,9 +54,61 @@ func (boardService *BoardService) GetBoardsByUserID(ID string) ([]*models.Board,
 	return boards, nil
 }
 
+func (boardService *BoardService) GetUserAccessibleBoards(user *models.User) ([]*models.Board, error) {
+	allBoards, err := boardService.GetBoards()
+	if err != nil {
+		return nil, err
+	}
+
+	if user.IsSuperuser() {
+		return allBoards, nil
+	}
+
+	boards := make([]*models.Board, 0)
+
+	for _, board := range allBoards {
+		if board.IsPublic || board.User.ID == user.ID {
+			boards = append(boards, board)
+			continue
+		}
+
+		permissionPaths := make([]string, len(board.Permissions))
+
+		for index, permission := range board.Permissions {
+			permissionPaths[index] = permission.Path
+		}
+
+		if board.User.IsAuthorizedPartial(permissionPaths...) {
+			boards = append(boards, board)
+			continue
+		}
+	}
+
+	return boards, nil
+}
+
+func (boardService *BoardService) GetUserAccessibleBoardByID(ID string, user *models.User) (*models.Board, error) {
+	board, err := boardService.GetBoardByID(ID)
+	if err != nil {
+		return nil, err
+	}
+
+	permissionPaths := make([]string, len(board.Permissions))
+
+	for index, permission := range board.Permissions {
+		permissionPaths[index] = permission.Path
+	}
+
+	if !user.IsSuperuser() && (board.User.ID != user.ID || !user.IsAuthorizedPartial(permissionPaths...)) {
+		return nil, errors.New("unauthorized")
+	}
+
+	return board, nil
+}
+
 func (boardService *BoardService) CreateBoard(data *validators.CreateBoardValidator) (*models.Board, error) {
 	if boardService.boardRepository.ExistsForUserByName(data.UserID, data.Name) {
-		return nil, errors.New("board already ")
+		return nil, errors.New("board already exists")
 	}
 
 	board := &models.Board{

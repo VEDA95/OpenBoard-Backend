@@ -42,6 +42,30 @@ func (workspaceService *WorkspaceService) GetWorkspaceByID(ID string) (*models.W
 	return workspace, nil
 }
 
+func (workspaceService *WorkspaceService) GetUserAccessibleWorkspaceByID(ID string, user *models.User) (*models.Worksapce, error) {
+	workspace, err := workspaceService.workspaceRepository.FindByID(ID, repository.QueryOptions{
+		Preload: []string{"User", "Permissions", "Boards"},
+		Omit:    []string{"UserID"},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if !user.IsSuperuser() && (!workspace.IsPublic || workspace.User.ID != user.ID) {
+		permissionPaths := make([]string, len(workspace.Permissions))
+
+		for index, permission := range workspace.Permissions {
+			permissionPaths[index] = permission.Path
+		}
+
+		if !user.IsAuthorizedPartial(permissionPaths...) {
+			return nil, errors.New("unauthorized")
+		}
+	}
+
+	return workspace, nil
+}
+
 func (workspaceService *WorkspaceService) GetWorkspaceByUserID(ID string) ([]*models.Worksapce, error) {
 	workspaces, err := workspaceService.workspaceRepository.FindByUserID(ID, repository.QueryOptions{
 		Preload: []string{"User", "Permissions", "Boards"},
@@ -49,6 +73,39 @@ func (workspaceService *WorkspaceService) GetWorkspaceByUserID(ID string) ([]*mo
 	})
 	if err != nil {
 		return nil, err
+	}
+
+	return workspaces, nil
+}
+
+func (workspaceService *WorkspaceService) GetUserAccessibleWorkspaces(user *models.User) ([]*models.Worksapce, error) {
+	allWorkspaces, err := workspaceService.GetWorkspaces()
+	if err != nil {
+		return nil, err
+	}
+
+	if user.IsSuperuser() {
+		return allWorkspaces, nil
+	}
+
+	workspaces := make([]*models.Worksapce, 0)
+
+	for _, workspace := range allWorkspaces {
+		if workspace.IsPublic || workspace.User.ID == user.ID {
+			workspaces = append(workspaces, workspace)
+			continue
+		}
+
+		permissionPaths := make([]string, len(workspace.Permissions))
+
+		for index, permission := range workspace.Permissions {
+			permissionPaths[index] = permission.Path
+		}
+
+		if user.IsAuthorizedPartial(permissionPaths...) {
+			workspaces = append(workspaces, workspace)
+			continue
+		}
 	}
 
 	return workspaces, nil

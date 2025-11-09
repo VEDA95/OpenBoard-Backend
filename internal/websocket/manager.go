@@ -1,12 +1,13 @@
 package websocket
 
 import (
+	"fmt"
+	"time"
+
 	models "VEDA95/open_board/api/internal/db/model"
 	"VEDA95/open_board/api/internal/http/validators"
 	"VEDA95/open_board/api/internal/log"
 	"VEDA95/open_board/api/internal/service"
-	"fmt"
-	"time"
 
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
@@ -99,6 +100,7 @@ func (connectionManager *WebsocketConnectionManager) ListenToConnection() fiber.
 				connection.AuthData.AccessToken = session.AccessToken
 				connection.AuthData.Autheticated = true
 
+				connectionManager.Store.Set(connection)
 				go connectionManager.checkUserSession(connection)
 				go func() {
 					successMessage := "auth check successful!"
@@ -137,6 +139,7 @@ func (connectionManager *WebsocketConnectionManager) ListenToConnection() fiber.
 				}
 
 				connection.Topics.Set(message.Topic)
+				connectionManager.Store.Set(connection)
 
 				go func() {
 					successMessage := fmt.Sprintf("topic: %s has been added successfully", message.Topic)
@@ -158,6 +161,7 @@ func (connectionManager *WebsocketConnectionManager) ListenToConnection() fiber.
 				}
 
 				connection.Topics.Remove(message.Topic)
+				connectionManager.Store.Set(connection)
 
 				go func() {
 					successMessage := fmt.Sprintf("topic: %s has been removed successfully", message.Topic)
@@ -201,6 +205,74 @@ func (connectionManager *WebsocketConnectionManager) BroadcastToTopic(topic stri
 	connections := connectionManager.Store.GetByTopic(topic)
 
 	for _, connection := range connections {
+		go func() {
+			if err := connection.Conncection.WriteJSON(message); err != nil {
+				log.Global.Error().Err(err).Msgf("an error occurred when sending message to websocket connection: %s", connection.ID.String())
+			}
+		}()
+	}
+}
+
+func (connectionManager *WebsocketConnectionManager) BroadcastTopicToAuthorizedUsers(topic string, message WebsocketMessage, permissions ...string) {
+	connections := connectionManager.Store.GetByTopic(topic)
+
+	for _, connection := range connections {
+		if !connection.AuthData.User.IsAuthorizedPartial(permissions...) {
+			continue
+		}
+
+		go func() {
+			if err := connection.Conncection.WriteJSON(message); err != nil {
+				log.Global.Error().Err(err).Msgf("an error occurred when sending message to websocket connection: %s", connection.ID.String())
+			}
+		}()
+	}
+}
+
+func (connectionManager *WebsocketConnectionManager) EmitAll(ID string, message WebsocketMessage) {
+	connections := connectionManager.Store.GetAll()
+
+	for _, connection := range connections {
+		if ID == connection.AuthData.User.ID {
+			continue
+		}
+
+		go func() {
+			if err := connection.Conncection.WriteJSON(message); err != nil {
+				log.Global.Error().Err(err).Msgf("an error occurred when sending message to websocket connection: %s", connection.ID.String())
+			}
+		}()
+	}
+}
+
+func (connectionManager *WebsocketConnectionManager) EmitToTopic(ID string, topic string, message WebsocketMessage) {
+	connections := connectionManager.Store.GetByTopic(topic)
+
+	for _, connection := range connections {
+		if ID == connection.AuthData.User.ID {
+			continue
+		}
+
+		go func() {
+			if err := connection.Conncection.WriteJSON(message); err != nil {
+				log.Global.Error().Err(err).Msgf("an error occurred when sending message to websocket connection: %s", connection.ID.String())
+			}
+		}()
+	}
+}
+
+func (connectionManager *WebsocketConnectionManager) EmitTopicToAuthorizedUsers(ID string, topic string, message WebsocketMessage, permissions ...string) {
+	connections := connectionManager.Store.GetByTopic(topic)
+
+	for _, connection := range connections {
+		if ID == connection.AuthData.User.ID {
+			continue
+		}
+
+		if !connection.AuthData.User.IsAuthorizedPartial(permissions...) {
+			continue
+		}
+
 		go func() {
 			if err := connection.Conncection.WriteJSON(message); err != nil {
 				log.Global.Error().Err(err).Msgf("an error occurred when sending message to websocket connection: %s", connection.ID.String())

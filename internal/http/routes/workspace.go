@@ -1,12 +1,13 @@
 package routes
 
 import (
+	"fmt"
+
 	models "VEDA95/open_board/api/internal/db/model"
 	"VEDA95/open_board/api/internal/errors"
 	"VEDA95/open_board/api/internal/http/responses"
 	"VEDA95/open_board/api/internal/http/validators"
 	"VEDA95/open_board/api/internal/service"
-	"fmt"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -25,7 +26,7 @@ func NewWorkspaceHandler(workspaceService *service.WorkspaceService, validator *
 
 func (workspaceHandler *WorkspaceHandler) GET(context *fiber.Ctx) error {
 	session := context.Locals("auth_session").(models.Session)
-	workspaces, err := workspaceHandler.workspaceService.GetWorkspaceByUserID(session.User.ID)
+	workspaces, err := workspaceHandler.workspaceService.GetUserAccessibleWorkspaces(session.User)
 	if err != nil {
 		return err
 	}

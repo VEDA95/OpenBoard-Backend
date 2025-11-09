@@ -42,3 +42,80 @@ func (user *User) ValidPassword(password string) bool {
 
 	return match
 }
+
+func (user *User) permissionPaths() map[string]bool {
+	permissionMap := make(map[string]bool)
+
+	if len(user.Roles) == 0 {
+		return permissionMap
+	}
+
+	for _, role := range user.Roles {
+		if len(role.Permissions) == 0 {
+			continue
+		}
+
+		for _, permission := range role.Permissions {
+			permissionMap[permission.Path] = true
+		}
+	}
+
+	return permissionMap
+}
+
+func (user *User) IsAuthorized(paths ...string) bool {
+	if user.IsSuperuser() {
+		return true
+	}
+
+	permissions := user.permissionPaths()
+
+	if (len(permissions) == 0 && len(paths) == 0) || (len(permissions) > 0 && len(paths) == 0) {
+		return true
+	}
+
+	if len(permissions) == 0 && len(paths) > 0 {
+		return false
+	}
+
+	for _, permission := range paths {
+		if !permissions[permission] {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (user *User) IsAuthorizedPartial(paths ...string) bool {
+	if user.IsSuperuser() {
+		return true
+	}
+
+	permissions := user.permissionPaths()
+
+	if (len(permissions) == 0 && len(paths) == 0) || (len(permissions) > 0 && len(paths) == 0) {
+		return true
+	}
+
+	if len(permissions) == 0 && len(paths) > 0 {
+		return false
+	}
+
+	partial := false
+
+	for _, permission := range paths {
+		if permissions[permission] {
+			partial = true
+			break
+		}
+	}
+
+	return partial
+}
+
+func (user *User) IsSuperuser() bool {
+	permissions := user.permissionPaths()
+
+	return permissions["auth:superuser"]
+}
