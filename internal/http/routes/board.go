@@ -1,12 +1,13 @@
 package routes
 
 import (
-	"fmt"
-
 	"VEDA95/open_board/api/internal/errors"
 	"VEDA95/open_board/api/internal/http/responses"
 	"VEDA95/open_board/api/internal/http/validators"
 	"VEDA95/open_board/api/internal/service"
+	"fmt"
+
+	models "VEDA95/open_board/api/internal/db/model"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -91,7 +92,8 @@ func (boardHandler *BoardHandler) PATCH(context *fiber.Ctx) error {
 		return errors.CreateValidationError(errs)
 	}
 
-	board, err := boardHandler.boardService.UpdateBoard(params.Id, validatorData)
+	session := context.Locals("auth_session").(models.Session)
+	board, err := boardHandler.boardService.UpdateBoard(params.Id, session.User, validatorData)
 	if err != nil {
 		return err
 	}

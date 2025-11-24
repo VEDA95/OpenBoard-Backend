@@ -44,7 +44,7 @@ func main() {
 		envType = "development"
 	}
 
-	dbInstance, err := db.NewDB(logger)
+	dbInstance, err := db.NewDB()
 	if err != nil {
 		if envType == "production" {
 			fmt.Println(errorMessage)
