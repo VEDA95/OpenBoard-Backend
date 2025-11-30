@@ -100,3 +100,19 @@ func (roleRepo *RoleRepository) UpdateWithPermissions(role *models.Role, permiss
 func (roleRepo *RoleRepository) Delete(ID string) error {
 	return roleRepo.db.Delete(&models.Role{}, ID).Error
 }
+
+func (roleRepo *RoleRepository) Exists(ID string) bool {
+	exists := false
+
+	roleRepo.db.Raw("SELECT EXISTS(SELECT 1 FROM roles WHERE id = ?) AS found", ID).Find(&exists)
+
+	return exists
+}
+
+func (roleRepo *RoleRepository) ExistsByName(name string) bool {
+	exists := false
+
+	roleRepo.db.Raw("SELECT EXISTS(SELECT 1 FROM roles WHERE name = ?) AS found", name).Find(&exists)
+
+	return exists
+}

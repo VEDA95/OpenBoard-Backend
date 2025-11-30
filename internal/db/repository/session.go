@@ -79,3 +79,27 @@ func (sessionRepo *SessionRepository) Delete(ID string) error {
 func (sessionRepo *SessionRepository) DeleteByUserID(ID string) error {
 	return sessionRepo.db.Where("user_id = ?", ID).Delete(&models.Session{}).Error
 }
+
+func (sessionRepo *SessionRepository) Exists(ID string) bool {
+	exists := false
+
+	sessionRepo.db.Raw("SELECT EXISTS(SELECT 1 FROM sessions WHERE id = ?) AS found", ID).Find(&exists)
+
+	return exists
+}
+
+func (sessionRepo *SessionRepository) ExistsByAcessToken(token string) bool {
+	exists := false
+
+	sessionRepo.db.Raw("SELECT EXISTS(SELECT 1 FROM sessions WHERE access_token = ?) AS found", token).Find(&exists)
+
+	return exists
+}
+
+func (sessionRepo *SessionRepository) ExistsByRefreshToken(token string) bool {
+	exists := false
+
+	sessionRepo.db.Raw("SELECT EXISTS(SELECT 1 FROM sessions WHERE refresh_token = ?) AS found", token).Find(&exists)
+
+	return exists
+}

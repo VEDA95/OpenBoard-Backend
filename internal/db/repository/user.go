@@ -101,3 +101,19 @@ func (userRepo *UserRepository) UpdateWithRoles(user *models.User, roleIDs []str
 func (userRepo *UserRepository) Delete(ID string) error {
 	return userRepo.db.Delete(&models.User{}, ID).Error
 }
+
+func (userRepo *UserRepository) Exists(ID string) bool {
+	exists := false
+
+	userRepo.db.Raw("SELECT EXISTS(SELECT 1 FROM users WHERE id = ?) AS found", ID).Find(&exists)
+
+	return exists
+}
+
+func (userRepo *UserRepository) ExistsByUsernameOrEmail(username string, email string) bool {
+	exists := false
+
+	userRepo.db.Raw("SELECT EXISTS(SELECT 1 FROM users WHERE username = ? OR email = ?) AS found", username, email).Find(&exists)
+
+	return exists
+}

@@ -55,3 +55,19 @@ func (permissionRepo *PermissionRepository) Update(permission *models.Permission
 func (permissionRepo *PermissionRepository) Delete(ID string) error {
 	return permissionRepo.db.Delete(&models.Permission{}, ID).Error
 }
+
+func (permissionRepo *PermissionRepository) Exists(ID string) bool {
+	exists := false
+
+	permissionRepo.db.Raw("SELECT EXISTS(SELECT 1 FROM permissions WHERE id = ?) AS found", ID).Find(&exists)
+
+	return exists
+}
+
+func (permissionRepo *PermissionRepository) ExistsByPath(path string) bool {
+	exists := false
+
+	permissionRepo.db.Raw("SELECT EXISTS(SELECT 1 FROM roles WHERE name = ?) AS found", path).Find(&exists)
+
+	return exists
+}

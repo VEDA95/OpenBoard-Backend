@@ -52,3 +52,11 @@ func (fileUploadRepo *FileUploadRepository) Update(fileUpload *FileUploadReposit
 func (fileUploadRepo *FileUploadRepository) Delete(ID string) error {
 	return fileUploadRepo.db.Where("id = ?", ID).Delete(models.FileUpload{}).Error
 }
+
+func (fileUploadRepo *FileUploadRepository) Exists(ID string) bool {
+	exists := false
+
+	fileUploadRepo.db.Raw("SELECT EXISTS(SELECT 1 FROM file_uploads WHERE id = ?) AS found", ID).Find(&exists)
+
+	return exists
+}
