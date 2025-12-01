@@ -41,11 +41,11 @@ func (fileUploadRepo *FileUploadRepository) FindByUserID(ID string, options Quer
 	return fileUpload, nil
 }
 
-func (fileUploadRepo *FileUploadRepository) Create(fileUpload *FileUploadRepository, options QueryOptions) error {
+func (fileUploadRepo *FileUploadRepository) Create(fileUpload *models.FileUpload, options QueryOptions) error {
 	return options.AppendToQuery(fileUploadRepo.db).Create(fileUpload).Error
 }
 
-func (fileUploadRepo *FileUploadRepository) Update(fileUpload *FileUploadRepository, options QueryOptions) error {
+func (fileUploadRepo *FileUploadRepository) Update(fileUpload *models.FileUpload, options QueryOptions) error {
 	return options.AppendToQuery(fileUploadRepo.db).Save(fileUpload).Error
 }
 

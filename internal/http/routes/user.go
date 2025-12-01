@@ -11,14 +11,16 @@ import (
 )
 
 type UserHandler struct {
-	service   *service.UserService
-	validator *validators.Validator
+	service           *service.UserService
+	fileUploadService *service.FileUploadService
+	validator         *validators.Validator
 }
 
-func NewUserHandler(userService *service.UserService, validator *validators.Validator) *UserHandler {
+func NewUserHandler(userService *service.UserService, fileUploadService *service.FileUploadService, validator *validators.Validator) *UserHandler {
 	return &UserHandler{
-		service:   userService,
-		validator: validator,
+		service:           userService,
+		fileUploadService: fileUploadService,
+		validator:         validator,
 	}
 }
 
@@ -75,6 +77,41 @@ func (userHandler *UserHandler) POST(context *fiber.Ctx) error {
 			"message": fmt.Sprintf("The user: %s has been successfully created", user.Username),
 			"user":    user,
 		}),
+	)
+}
+
+func (userHandler *UserHandler) POSTThumbnail(context *fiber.Ctx) error {
+	paramValidator := new(validators.ParamValidator)
+
+	if err := context.ParamsParser(paramValidator); err != nil {
+		return err
+	}
+
+	if errs := userHandler.validator.Validate(paramValidator); len(errs) > 0 {
+		return errors.CreateValidationError(errs)
+	}
+
+	user, err := userHandler.service.GetUser(paramValidator.Id)
+	if err != nil {
+		return err
+	}
+
+	uploadFile, err := context.FormFile("file_upload")
+	if err != nil {
+		return err
+	}
+
+	fileUpload, err := userHandler.fileUploadService.UploadFileAsUserThumbnail(user, uploadFile)
+	if err != nil {
+		return err
+	}
+
+	go context.SaveFile(uploadFile, fileUpload.Path)
+
+	return responses.JSONResponse(
+		context,
+		fiber.StatusCreated,
+		responses.OKResponse(fiber.StatusCreated, fileUpload),
 	)
 }
 
