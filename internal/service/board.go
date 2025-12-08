@@ -1,11 +1,11 @@
 package service
 
 import (
+	"VEDA95/open_board/api/internal/db/repository"
+	"VEDA95/open_board/api/internal/http/validators"
 	"errors"
 
 	models "VEDA95/open_board/api/internal/db/model"
-	"VEDA95/open_board/api/internal/db/repository"
-	"VEDA95/open_board/api/internal/http/validators"
 )
 
 type BoardService struct {
@@ -113,7 +113,7 @@ func (boardService *BoardService) CreateBoard(data *validators.CreateBoardValida
 
 	board := &models.Board{
 		Name:        data.Name,
-		WorksapceID: data.WorkspaceID,
+		WorkspaceID: data.WorkspaceID,
 		UserID:      data.UserID,
 		IsPublic:    *data.IsPublic,
 	}
@@ -200,12 +200,12 @@ func (boardService *BoardService) UpdateBoard(ID string, user *models.User, data
 		board.UserID = *data.UserID
 	}
 
-	if data.WorkspaceID != nil && *data.WorkspaceID != board.WorksapceID {
+	if data.WorkspaceID != nil && *data.WorkspaceID != board.WorkspaceID {
 		if insufficientPermission {
 			return nil, errors.New("unauthorized: only admins, managers, and owners can transfer this board to another workspace")
 		}
 
-		board.WorksapceID = *data.WorkspaceID
+		board.WorkspaceID = *data.WorkspaceID
 	}
 
 	if data.PermissionIDs != nil && len(*data.PermissionIDs) > 0 {
