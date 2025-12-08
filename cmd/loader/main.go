@@ -17,6 +17,15 @@ func main() {
 		&models.Role{},
 		&models.Permission{},
 		&models.PasswordResetToken{},
+		&models.Worksapce{},
+		&models.Board{},
+		&models.List{},
+		&models.Card{},
+		&models.CheckListItem{},
+		&models.CardActivity{},
+		&models.Comment{},
+		&models.Label{},
+		&models.FileUpload{},
 	)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to load gorm schema: %v\n", err)
