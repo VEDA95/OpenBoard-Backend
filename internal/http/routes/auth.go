@@ -509,3 +509,28 @@ func (*AuthHandler) UserSessionsGET(context *fiber.Ctx) error {
 
 	return responses.JSONResponse(context, fiber.StatusOK, responses.OKCollectionResponse(fiber.StatusOK, session.User.Sessions))
 }
+
+func (authHandler *AuthHandler) Register(context *fiber.Ctx) error {
+	validatorData := new(validators.RegisterUserValidator)
+
+	if err := context.BodyParser(validatorData); err != nil {
+		return err
+	}
+
+	if errs := authHandler.validator.Validate(validatorData); len(errs) > 0 {
+		return errors.CreateValidationError(errs)
+	}
+
+	if err := authHandler.authService.RegisterUser(validatorData); err != nil {
+		return err
+	}
+
+	return responses.JSONResponse(
+		context,
+		fiber.StatusCreated,
+		responses.OKResponse(
+			fiber.StatusCreated,
+			responses.GenericMessage{Message: "user created!"},
+		),
+	)
+}

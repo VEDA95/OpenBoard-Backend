@@ -15,13 +15,15 @@ type AuthService struct {
 	userRepo          *repository.UserRepository
 	sessionRepo       *repository.SessionRepository
 	passwordResetRepo *repository.PasswordResetRepository
+	roleRepo          *repository.RoleRepository
 }
 
-func NewAuthService(sessionRepo *repository.SessionRepository, userRepo *repository.UserRepository, passwordResetRepo *repository.PasswordResetRepository) *AuthService {
+func NewAuthService(sessionRepo *repository.SessionRepository, userRepo *repository.UserRepository, passwordResetRepo *repository.PasswordResetRepository, roleRepo *repository.RoleRepository) *AuthService {
 	return &AuthService{
 		userRepo:          userRepo,
 		sessionRepo:       sessionRepo,
 		passwordResetRepo: passwordResetRepo,
+		roleRepo:          roleRepo,
 	}
 }
 
@@ -348,4 +350,44 @@ func (authService *AuthService) ResetUserPassword(user *models.User, data *valid
 	return authService.userRepo.Update(user, repository.QueryOptions{
 		Select: []string{"updated_at", "hashed_password"},
 	})
+}
+
+func (authService *AuthService) RegisterUser(data *validators.RegisterUserValidator) error {
+	if authService.userRepo.ExistsByUsernameOrEmail(data.Username, data.Email) {
+		return errors.New("user already exists")
+	}
+
+	userRole, err := authService.roleRepo.FindByName("user", repository.QueryOptions{
+		Select: []string{"id"},
+	})
+	if err != nil {
+		return err
+	}
+
+	user := &models.User{
+		Username: data.Username,
+		Email:    data.Email,
+	}
+
+	if err := user.HashPassword(data.Password); err != nil {
+		return err
+	}
+
+	if data.FirstName != nil && len(*data.FirstName) > 0 {
+		user.FirstName = data.FirstName
+	}
+
+	if data.LastName != nil && len(*data.LastName) > 0 {
+		user.LastName = data.LastName
+	}
+
+	return authService.userRepo.CreateWithRoles(
+		user,
+		[]string{userRole.ID},
+		repository.QueryOptions{
+			Preload: []string{"Roles", "Roles.Permissions"},
+			Omit:    []string{"Sessions"},
+		},
+		repository.QueryOptions{},
+	)
 }

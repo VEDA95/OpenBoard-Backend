@@ -3,6 +3,7 @@ package main
 import (
 	"VEDA95/open_board/api/internal/config"
 	"VEDA95/open_board/api/internal/db"
+	"VEDA95/open_board/api/internal/db/repository"
 	appLogger "VEDA95/open_board/api/internal/log"
 	"flag"
 	"fmt"
@@ -54,6 +55,9 @@ func main() {
 	}
 
 	seeder := db.NewSeeder(dbInstance)
+	generalSettingsRepo := repository.NewGeneralSettingsRepository(dbInstance)
+	authSettingsRepo := repository.NewAuthSettingsRepository(dbInstance)
+	emailSettingsRepo := repository.NewEmailSettingsRepository(dbInstance)
 
 	if err := seeder.SeedPermissions(); err != nil {
 		if envType == "production" {
@@ -77,6 +81,39 @@ func main() {
 		}
 
 		logger.Fatal().Err(err).Msg("An error occurred when seeding the initial user")
+	}
+
+	generalSettings, err := generalSettingsRepo.Find()
+	if err != nil {
+		logger.Fatal().Err(err).Msg("An error occurred when fetching the general settings")
+	}
+
+	if generalSettings == nil {
+		if err := generalSettingsRepo.Create(); err != nil {
+			logger.Fatal().Err(err).Msg("An error occurred when creating the table for general settings")
+		}
+	}
+
+	authSettings, err := authSettingsRepo.Find()
+	if err != nil {
+		logger.Fatal().Err(err).Msg("An error occurred when fetching the auth settings")
+	}
+
+	if authSettings == nil {
+		if err := authSettingsRepo.Create(); err != nil {
+			logger.Fatal().Err(err).Msg("An error occurred when creating the table for auth settings")
+		}
+	}
+
+	emailSettings, err := emailSettingsRepo.Find()
+	if err != nil {
+		logger.Fatal().Err(err).Msg("An error occurred when fetching the email settings")
+	}
+
+	if emailSettings == nil {
+		if err := emailSettingsRepo.Create(); err != nil {
+			logger.Fatal().Err(err).Msg("An error occurred when creating the table for email settings")
+		}
 	}
 
 	fmt.Println("The database has been seeded successfully!")
