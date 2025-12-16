@@ -206,13 +206,16 @@ func (seeder *Seeder) SeedInitialUser() error {
 	user := &models.User{
 		Username: initialUsername,
 		Email:    initialEmail,
-		Roles:    []*models.Role{role},
 	}
 	if err := user.HashPassword(initialPassword); err != nil {
 		return err
 	}
 
-	if err := seeder.db.Omit("Sessions").Create(user).Error; err != nil {
+	if err := seeder.db.Create(user).Error; err != nil {
+		return err
+	}
+
+	if err := seeder.db.Model(user).Association("Roles").Append(role); err != nil {
 		return err
 	}
 

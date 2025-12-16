@@ -7,8 +7,7 @@ import (
 )
 
 type AuthSettings struct {
-	gorm.Model
-	ID                       uint       `gorm:"primaryKey;default:1;constraint:check:check_single_row_auth,id = 1" json:"id"`
+	ID                       int        `gorm:"primaryKey;check:check_single_row_auth,id = 1" json:"id"`
 	UpdatedAt                *time.Time `json:"updated_at"`
 	AllowPublicRegistration  bool       `gorm:"default:true" json:"allow_public_registration"`
 	RequireEmailVerification bool       `gorm:"default:true" json:"require_email_verification"`

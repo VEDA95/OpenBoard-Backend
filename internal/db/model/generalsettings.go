@@ -7,8 +7,7 @@ import (
 )
 
 type GeneralSettings struct {
-	gorm.Model
-	ID                     uint       `gorm:"primaryKey;default:1;constraint:OnDelete:RESTRICT;check:check_single_row_general,id = 1" json:"id"`
+	ID                     int        `gorm:"primaryKey;check:check_single_row_general,id = 1" json:"id"`
 	UpdatedAt              *time.Time `json:"updated_at"`
 	AppName                string     `gorm:"type:varchar(100);not null;default:'Kanban Board'" json:"app_name"`
 	AppURL                 string     `gorm:"type:varchar(255);not null;default:'http://localhost:3000'" json:"app_url"`

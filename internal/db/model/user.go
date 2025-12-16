@@ -14,7 +14,7 @@ type User struct {
 	FirstName      *string       `gorm:"type:varchar(255)" json:"first_name"`
 	LastName       *string       `gorm:"type:varchar(255)" json:"last_name"`
 	HashedPassword string        `gorm:"type:text;not null" json:"-"`
-	ThumbnailID    string        `gorm:"type:uuid;" json:"-"`
+	ThumbnailID    *string       `gorm:"type:uuid;" json:"-"`
 	Enabled        bool          `gorm:"not null;default:true" json:"enabled" default:"true"`
 	EmailVerified  bool          `gorm:"not null;default:false" json:"email_verified" default:"false"`
 	Thumbnail      *FileUpload   `gorm:"foreignKey:ThumbnailID" json:"thumbnail"`

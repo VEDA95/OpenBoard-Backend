@@ -16,8 +16,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	logger, err := appLogger.NewLogger()
-	if err != nil {
+	if err := appLogger.InitializeGlobal(); err != nil {
 		log.Fatal(err)
 	}
 
@@ -51,7 +50,7 @@ func main() {
 			fmt.Println(errorMessage)
 		}
 
-		logger.Fatal().Err(err).Msg("An error occurred when setting up the database connection")
+		appLogger.Global.Fatal().Err(err).Msg("An error occurred when setting up the database connection")
 	}
 
 	seeder := db.NewSeeder(dbInstance)
@@ -64,7 +63,7 @@ func main() {
 			fmt.Println(errorMessage)
 		}
 
-		logger.Fatal().Err(err).Msg("An error occurred when seeding permissions")
+		appLogger.Global.Fatal().Err(err).Msg("An error occurred when seeding permissions")
 	}
 
 	if err := seeder.SeedRoles(); err != nil {
@@ -72,7 +71,7 @@ func main() {
 			fmt.Println(errorMessage)
 		}
 
-		logger.Fatal().Err(err).Msg("An error occurred when seeding roles")
+		appLogger.Global.Fatal().Err(err).Msg("An error occurred when seeding roles")
 	}
 
 	if err := seeder.SeedInitialUser(); err != nil {
@@ -80,39 +79,39 @@ func main() {
 			fmt.Println(errorMessage)
 		}
 
-		logger.Fatal().Err(err).Msg("An error occurred when seeding the initial user")
+		appLogger.Global.Fatal().Err(err).Msg("An error occurred when seeding the initial user")
 	}
 
 	generalSettings, err := generalSettingsRepo.Find()
-	if err != nil {
-		logger.Fatal().Err(err).Msg("An error occurred when fetching the general settings")
+	if err != nil && err.Error() != "record not found" {
+		appLogger.Global.Fatal().Err(err).Msg("An error occurred when fetching the general settings")
 	}
 
 	if generalSettings == nil {
 		if err := generalSettingsRepo.Create(); err != nil {
-			logger.Fatal().Err(err).Msg("An error occurred when creating the table for general settings")
+			appLogger.Global.Fatal().Err(err).Msg("An error occurred when creating the table for general settings")
 		}
 	}
 
 	authSettings, err := authSettingsRepo.Find()
-	if err != nil {
-		logger.Fatal().Err(err).Msg("An error occurred when fetching the auth settings")
+	if err != nil && err.Error() != "record not found" {
+		appLogger.Global.Fatal().Err(err).Msg("An error occurred when fetching the auth settings")
 	}
 
 	if authSettings == nil {
 		if err := authSettingsRepo.Create(); err != nil {
-			logger.Fatal().Err(err).Msg("An error occurred when creating the table for auth settings")
+			appLogger.Global.Fatal().Err(err).Msg("An error occurred when creating the table for auth settings")
 		}
 	}
 
 	emailSettings, err := emailSettingsRepo.Find()
-	if err != nil {
-		logger.Fatal().Err(err).Msg("An error occurred when fetching the email settings")
+	if err != nil && err.Error() != "record not found" {
+		appLogger.Global.Fatal().Err(err).Msg("An error occurred when fetching the email settings")
 	}
 
 	if emailSettings == nil {
 		if err := emailSettingsRepo.Create(); err != nil {
-			logger.Fatal().Err(err).Msg("An error occurred when creating the table for email settings")
+			appLogger.Global.Fatal().Err(err).Msg("An error occurred when creating the table for email settings")
 		}
 	}
 

@@ -35,8 +35,6 @@ func (l *GormZerologger) LogMode(level gormlogger.LogLevel) gormlogger.Interface
 		l.Logger.Level(zerolog.ErrorLevel)
 	case gormlogger.Warn:
 		l.Logger.Level(zerolog.WarnLevel)
-	case gormlogger.Info:
-		l.Logger.Level(zerolog.InfoLevel)
 	}
 
 	return l
