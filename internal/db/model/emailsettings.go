@@ -24,10 +24,8 @@ type EmailSettings struct {
 	SMTPTimeout              int        `gorm:"default:30" json:"smtp_timeout"` // seconds
 	SMTPPoolSize             int        `gorm:"default:10" json:"smtp_pool_size"`
 	SendGridAPIKey           *string    `gorm:"type:varchar(255)" json:"sendgrid_api_key"`
-	SendGridWebhookSecret    *string    `gorm:"type:varchar(255)" json:"sendgrid_webhook_secret"`
 	MailgunAPIKey            *string    `gorm:"type:varchar(255)" json:"mailgun_api_key"`
 	MailgunDomain            *string    `gorm:"type:varchar(255)" json:"mailgun_domain"`
-	MailgunRegion            string     `gorm:"type:varchar(10);default:'us'" json:"mailgun_region"` // us, eu
 	SESAccessKeyID           *string    `gorm:"type:varchar(255)" json:"ses_access_key_id"`
 	SESSecretAccessKey       *string    `gorm:"type:varchar(255)" json:"ses_secret_access_key"`
 	SESRegion                string     `gorm:"type:varchar(50);default:'us-east-1'" json:"ses_region"`

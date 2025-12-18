@@ -4,6 +4,7 @@ import (
 	"VEDA95/open_board/api/internal/errors"
 	"VEDA95/open_board/api/internal/http/responses"
 	"VEDA95/open_board/api/internal/http/validators"
+	"VEDA95/open_board/api/internal/log"
 	"VEDA95/open_board/api/internal/service"
 
 	"github.com/gofiber/fiber/v2"
@@ -11,12 +12,18 @@ import (
 
 type SettingsHandler struct {
 	settingsService *service.SettingsService
+	emailService    *service.EmailService
 	validator       *validators.Validator
 }
 
-func NewSettingsHandler(settingsService *service.SettingsService, validator *validators.Validator) *SettingsHandler {
+func NewSettingsHandler(
+	settingsService *service.SettingsService,
+	emailService *service.EmailService,
+	validator *validators.Validator,
+) *SettingsHandler {
 	return &SettingsHandler{
 		settingsService: settingsService,
+		emailService:    emailService,
 		validator:       validator,
 	}
 }
@@ -103,6 +110,12 @@ func (settingsHandler *SettingsHandler) PATCH(context *fiber.Ctx) error {
 		if err != nil {
 			return err
 		}
+
+		go func() {
+			if err := settingsHandler.emailService.InitializeClient(); err != nil {
+				log.Global.Warn().Err(err).Msg("an error occurred when initializing the email client")
+			}
+		}()
 
 		return responses.JSONResponse(context, fiber.StatusOK, responses.OKResponse(fiber.StatusOK, emailSettings))
 	}

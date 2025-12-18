@@ -63,7 +63,10 @@ func main() {
 		applogger.Global.Fatal().Err(err).Msg("")
 	}
 
-	emailService, err := service.NewEmailService(emailRepo)
+	generalSettingsRepo := repository.NewGeneralSettingsRepository(dbInstance)
+	authSettingsRepo := repository.NewAuthSettingsRepository(dbInstance)
+	emailSettingsRepo := repository.NewEmailSettingsRepository(dbInstance)
+	emailService, err := service.NewEmailService(emailRepo, emailSettingsRepo)
 	if err != nil {
 		if !strings.Contains(err.Error(), "required email settings are missing") {
 			applogger.Global.Fatal().Err(err).Msg("")
@@ -72,9 +75,6 @@ func main() {
 		applogger.Global.Warn().Err(err).Msg("")
 	}
 
-	generalSettingsRepo := repository.NewGeneralSettingsRepository(dbInstance)
-	authSettingsRepo := repository.NewAuthSettingsRepository(dbInstance)
-	emailSettingsRepo := repository.NewEmailSettingsRepository(dbInstance)
 	userRepo := repository.NewUserRepository(dbInstance)
 	sessionRepo := repository.NewSessionRepository(dbInstance)
 	roleRepo := repository.NewRoleRepository(dbInstance)
@@ -91,7 +91,7 @@ func main() {
 	fileUploadRepo := repository.NewFileUploadRepository(dbInstance)
 	settingsService := service.NewSettingsService(generalSettingsRepo, authSettingsRepo, emailSettingsRepo)
 	userService := service.NewUserService(userRepo, roleRepo)
-	authService := service.NewAuthService(sessionRepo, userRepo, passwordResetRepo, roleRepo)
+	authService := service.NewAuthService(sessionRepo, userRepo, passwordResetRepo, roleRepo, authSettingsRepo)
 	roleService := service.NewRoleService(roleRepo)
 	permissionService := service.NewPermissionService(permissionRepo)
 	workspaceService := service.NewWorkspaceService(workspaceRepo)
@@ -103,7 +103,7 @@ func main() {
 	commentService := service.NewCommentService(commentRepo, cardRepo)
 	fileUploadService := service.NewFileUploadService(fileUploadRepo, userRepo, cardRepo)
 	validator := validators.NewValidator()
-	settingsHandler := routes.NewSettingsHandler(settingsService, validator)
+	settingsHandler := routes.NewSettingsHandler(settingsService, emailService, validator)
 	userHandler := routes.NewUserHandler(userService, fileUploadService, validator)
 	authHandler := routes.NewAuthHandler(authService, userService, emailService, validator)
 	roleHandler := routes.NewRoleHandler(roleService, validator)

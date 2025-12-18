@@ -10,9 +10,10 @@ import (
 )
 
 type EmailRepository struct {
-	sender    string
-	templates map[string]string
-	mutex     *sync.RWMutex
+	sender     string
+	senderName *string
+	templates  map[string]string
+	mutex      *sync.RWMutex
 }
 
 func NewEmailRepository() (*EmailRepository, error) {
@@ -93,12 +94,20 @@ func (emailRepo *EmailRepository) GetSender() string {
 	return emailRepo.sender
 }
 
+func (emailRepo *EmailRepository) GetSenderName() *string {
+	return emailRepo.senderName
+}
+
 func (emailRepo *EmailRepository) GetTemplateCount() int {
 	return len(emailRepo.templates)
 }
 
 func (emailRepo *EmailRepository) SetSender(sender string) {
 	emailRepo.sender = sender
+}
+
+func (emailRepo *EmailRepository) SetSenderName(senderName *string) {
+	emailRepo.senderName = senderName
 }
 
 func (emailRepo *EmailRepository) RenderTemplate(name string, variables interface{}) string {

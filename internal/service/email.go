@@ -5,59 +5,92 @@ import (
 	"VEDA95/open_board/api/internal/email"
 	"bytes"
 	"errors"
-	"os"
-	"strconv"
 	"text/template"
 
-	"github.com/wneessen/go-mail"
+	"gorm.io/gorm"
 )
 
 type EmailService struct {
-	repo   *repository.EmailRepository
-	client *mail.Client
+	emailRepo         *repository.EmailRepository
+	emailSettingsRepo *repository.EmailSettingsRepository
+	client            email.EmailClient
 }
 
-func NewEmailService(emailRepo *repository.EmailRepository) (*EmailService, error) {
-	smtpServer := os.Getenv("SMTP_SERVER")
-	smtpPort := os.Getenv("SMTP_PORT")
-	smtpUsername := os.Getenv("SMTP_USERNAME")
-	smtpPassword := os.Getenv("SMTP_PASSWORD")
-	smtpTLS := os.Getenv("SMTP_TLS")
-	emailSender := os.Getenv("SENDER_EMAIL")
-
-	if len(smtpServer) == 0 || len(smtpPort) == 0 || len(smtpUsername) == 0 || len(smtpPassword) == 0 || len(emailSender) == 0 || len(smtpTLS) == 0 {
-		return nil, errors.New("required email settings are missing")
+func NewEmailService(emailRepo *repository.EmailRepository, emailSettingsRepo *repository.EmailSettingsRepository) (*EmailService, error) {
+	emailService := &EmailService{
+		emailRepo:         emailRepo,
+		emailSettingsRepo: emailSettingsRepo,
 	}
 
-	parsedTLSBool, err := strconv.ParseBool(smtpTLS)
-	if err != nil {
+	if err := emailService.InitializeClient(); err != nil {
 		return nil, err
 	}
 
-	parsedPort, err := strconv.Atoi(smtpPort)
-	if err != nil {
-		return nil, err
+	return emailService, nil
+}
+
+func (emailService *EmailService) InitializeClient() error {
+	emailSettings, err := emailService.emailSettingsRepo.Find()
+
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return err
 	}
 
-	client, err := email.CreateEmailClient(smtpServer, parsedPort, mail.SMTPAuthPlain, parsedTLSBool, smtpUsername, smtpPassword)
-	if err != nil {
-		return nil, err
+	if emailSettings == nil {
+		return errors.New("unable to fetch email settings")
 	}
 
-	emailRepo.SetSender(emailSender)
+	if !emailSettings.EmailEnabled {
+		if emailService.client != nil {
+			emailService.client = nil
+		}
 
-	return &EmailService{
-		repo:   emailRepo,
-		client: client,
-	}, nil
+		return nil
+	}
+
+	if emailSettings.EmailFromAddress == nil || len(*emailSettings.EmailFromAddress) == 0 {
+		return errors.New("valid email address for the sender is required")
+	}
+
+	if emailSettings.EmailFromName != nil && len(*emailSettings.EmailFromName) > 0 {
+		emailService.emailRepo.SetSenderName(emailSettings.EmailFromName)
+	}
+
+	emailService.emailRepo.SetSender(*emailSettings.EmailFromAddress)
+
+	if emailSettings.EmailProvider == "smtp" {
+		emailService.client = &email.GoMailClient{}
+	}
+
+	if emailSettings.EmailProvider == "sendgrid" {
+		emailService.client = &email.SendGridClient{}
+	}
+
+	if emailSettings.EmailProvider == "mailgun" {
+		emailService.client = &email.MainlGunClient{}
+	}
+
+	if emailSettings.EmailProvider == "ses" {
+		emailService.client = &email.SESClient{}
+	}
+
+	if emailSettings.EmailProvider == "postmark" {
+		emailService.client = &email.PostMarkClient{}
+	}
+
+	if err := emailService.client.Initialize(emailSettings); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (emailService *EmailService) RenderTemplate(name string, variables any) string {
-	if emailService.repo.GetTemplateCount() == 0 {
+	if emailService.emailRepo.GetTemplateCount() == 0 {
 		return ""
 	}
 
-	rawTemplate := emailService.repo.GetTemplate(name)
+	rawTemplate := emailService.emailRepo.GetTemplate(name)
 
 	if len(rawTemplate) == 0 {
 		return rawTemplate
@@ -77,21 +110,19 @@ func (emailService *EmailService) RenderTemplate(name string, variables any) str
 	return buffer.String()
 }
 
-func (mailService *EmailService) SendMessage(subject string, recipient string, templateName string, templatePayload any) error {
-	message := mail.NewMsg()
-
-	message.Subject(subject)
-	message.SetBodyString(mail.TypeTextHTML, mailService.RenderTemplate(templateName, templatePayload))
-
-	if err := message.From(mailService.repo.GetSender()); err != nil {
-		return err
+func (emailService *EmailService) SendMessage(recipient string, templateName string, templatePayload any, subject *string) error {
+	if emailService.client == nil {
+		return errors.New("email client has not been initialized")
 	}
 
-	if err := message.To(recipient); err != nil {
-		return err
-	}
-
-	if err := mailService.client.DialAndSend(message); err != nil {
+	err := emailService.client.Send(
+		emailService.emailRepo.GetSender(),
+		recipient,
+		emailService.RenderTemplate(templateName, templatePayload),
+		subject,
+		emailService.emailRepo.GetSenderName(),
+	)
+	if err != nil {
 		return err
 	}
 
