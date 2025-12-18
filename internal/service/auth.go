@@ -6,9 +6,9 @@ import (
 	"VEDA95/open_board/api/internal/db/repository"
 	"VEDA95/open_board/api/internal/http/validators"
 	"errors"
-	"os"
-	"strconv"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 type AuthService struct {
@@ -16,14 +16,22 @@ type AuthService struct {
 	sessionRepo       *repository.SessionRepository
 	passwordResetRepo *repository.PasswordResetRepository
 	roleRepo          *repository.RoleRepository
+	authSettingsRepo  *repository.AuthSettingsRepository
 }
 
-func NewAuthService(sessionRepo *repository.SessionRepository, userRepo *repository.UserRepository, passwordResetRepo *repository.PasswordResetRepository, roleRepo *repository.RoleRepository) *AuthService {
+func NewAuthService(
+	sessionRepo *repository.SessionRepository,
+	userRepo *repository.UserRepository,
+	passwordResetRepo *repository.PasswordResetRepository,
+	roleRepo *repository.RoleRepository,
+	authSettingsRepo *repository.AuthSettingsRepository,
+) *AuthService {
 	return &AuthService{
 		userRepo:          userRepo,
 		sessionRepo:       sessionRepo,
 		passwordResetRepo: passwordResetRepo,
 		roleRepo:          roleRepo,
+		authSettingsRepo:  authSettingsRepo,
 	}
 }
 
@@ -66,21 +74,14 @@ func (authService *AuthService) ValidateSession(token string) (*models.Session, 
 }
 
 func (authService *AuthService) LocalLogin(data *validators.LocalLoginValidator, userAgent string, IPAdress string) (*auth.LoginResponse, error) {
-	expiresInEnv := os.Getenv("AUTH_SESSION_EXPIRES_IN")
-	refreshExpiresInEnv := os.Getenv("AUTH_SESSION_REFRESH_EXPIRES_IN")
+	authSettings, err := authService.authSettingsRepo.Find()
 
-	if len(expiresInEnv) == 0 || len(refreshExpiresInEnv) == 0 {
-		return nil, errors.New("AUTH_SESSION_EXPIRES_IN and/or AUTH_SESSION_REFRESH_EXPIRES_IN environment variable(s) was not set")
-	}
-
-	expiresIn, err := strconv.Atoi(expiresInEnv)
-	if err != nil {
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, err
 	}
 
-	refreshExpiresIn, err := strconv.Atoi(refreshExpiresInEnv)
-	if err != nil {
-		return nil, err
+	if authSettings == nil {
+		return nil, errors.New("unable to fetch auth settings")
 	}
 
 	user, err := authService.userRepo.FindByUsername(data.Username, repository.QueryOptions{
@@ -99,23 +100,23 @@ func (authService *AuthService) LocalLogin(data *validators.LocalLoginValidator,
 		return nil, errors.New("account has been disabled")
 	}
 
-	response := &auth.LoginResponse{ExpiresIn: expiresIn}
+	response := &auth.LoginResponse{ExpiresIn: authSettings.SessionTimeout}
 	columns := []string{"id", "type", "ip_address", "user_agent", "expires_on", "user_id", "access_token"}
 	now := time.Now()
 	session := &models.Session{
 		Type:      "local",
 		IPAddress: IPAdress,
 		UserAgent: userAgent,
-		ExpiresOn: now.Add(time.Second * time.Duration(expiresIn)),
+		ExpiresOn: now.Add(time.Second * time.Duration(authSettings.SessionTimeout)),
 		UserID:    user.ID,
 	}
 	user.LastLogin = &now
 
 	if data.Remember {
-		refreshExpiresOn := now.Add(time.Second * time.Duration(refreshExpiresIn))
+		refreshExpiresOn := now.Add(time.Second * time.Duration(authSettings.RememberMeDuration))
 		session.RememberMe = true
 		session.RefreshExpiresOn = &refreshExpiresOn
-		response.RefreshExpiresIn = &refreshExpiresIn
+		response.RefreshExpiresIn = &authSettings.RememberMeDuration
 		columns = append(columns, "remember_me", "refresh_expires_on", "refresh_token")
 	}
 
@@ -144,21 +145,14 @@ func (authService *AuthService) LocalLogin(data *validators.LocalLoginValidator,
 }
 
 func (authService *AuthService) LocalRefresh(token string) (*auth.LoginResponse, error) {
-	expiresInEnv := os.Getenv("AUTH_SESSION_EXPIRES_IN")
-	refreshExpiresInEnv := os.Getenv("AUTH_SESSION_REFRESH_EXPIRES_IN")
+	authSettings, err := authService.authSettingsRepo.Find()
 
-	if len(expiresInEnv) == 0 || len(refreshExpiresInEnv) == 0 {
-		return nil, errors.New("AUTH_SESSION_EXPIRES_IN and/or AUTH_SESSION_REFRESH_EXPIRES_IN environment variable(s) was not set")
-	}
-
-	expiresIn, err := strconv.Atoi(expiresInEnv)
-	if err != nil {
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, err
 	}
 
-	refreshExpiresIn, err := strconv.Atoi(refreshExpiresInEnv)
-	if err != nil {
-		return nil, err
+	if authSettings == nil {
+		return nil, errors.New("unable to fetch auth settings")
 	}
 
 	session, err := authService.sessionRepo.FindByRefreshToken(token, repository.QueryOptions{
@@ -178,14 +172,14 @@ func (authService *AuthService) LocalRefresh(token string) (*auth.LoginResponse,
 	}
 
 	columns := []string{"expires_on", "access_token"}
-	response := &auth.LoginResponse{ExpiresIn: expiresIn}
+	response := &auth.LoginResponse{ExpiresIn: authSettings.SessionTimeout}
 	now := time.Now()
-	session.ExpiresOn = now.Add(time.Second * time.Duration(expiresIn))
+	session.ExpiresOn = now.Add(time.Second * time.Duration(authSettings.SessionTimeout))
 
 	if session.RememberMe {
-		refreshExpiresOn := now.Add(time.Second * time.Duration(refreshExpiresIn))
+		refreshExpiresOn := now.Add(time.Second * time.Duration(authSettings.RememberMeDuration))
 		session.RefreshExpiresOn = &refreshExpiresOn
-		response.RefreshExpiresIn = &refreshExpiresIn
+		response.RefreshExpiresIn = &authSettings.RememberMeDuration
 		columns = append(columns, "refresh_expires_on", "refresh_token")
 	}
 
@@ -353,6 +347,19 @@ func (authService *AuthService) ResetUserPassword(user *models.User, data *valid
 }
 
 func (authService *AuthService) RegisterUser(data *validators.RegisterUserValidator) error {
+	authSettings, err := authService.authSettingsRepo.Find()
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil
+	}
+
+	if authSettings == nil {
+		return errors.New("unable to fetch auth settings")
+	}
+
+	if !authSettings.AllowPublicRegistration {
+		return errors.New("user registration is not enabled")
+	}
+
 	if authService.userRepo.ExistsByUsernameOrEmail(data.Username, data.Email) {
 		return errors.New("user already exists")
 	}
