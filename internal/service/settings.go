@@ -55,19 +55,19 @@ func (settingsService *SettingsService) UpdateGeneralSettings(data *validators.G
 		generalSettings.AppURL = *data.AppURL
 	}
 
-	if data.AppLogo != nil && data.AppLogo != generalSettings.AppLogo {
-		if len(*data.AppLogo) == 0 {
-			generalSettings.AppLogo = nil
+	if data.AppLogoID != nil && data.AppLogoID != generalSettings.AppLogoID {
+		if len(*data.AppLogoID) == 0 {
+			generalSettings.AppLogoID = nil
 		} else {
-			generalSettings.AppLogo = data.AppLogo
+			generalSettings.AppLogoID = data.AppLogoID
 		}
 	}
 
-	if data.AppFavicon != nil && data.AppFavicon != generalSettings.AppFavicon {
-		if len(*data.AppFavicon) == 0 {
-			generalSettings.AppFavicon = nil
+	if data.AppFaviconID != nil && data.AppFaviconID != generalSettings.AppFaviconID {
+		if len(*data.AppFaviconID) == 0 {
+			generalSettings.AppFaviconID = nil
 		} else {
-			generalSettings.AppFavicon = data.AppFavicon
+			generalSettings.AppFaviconID = data.AppFaviconID
 		}
 	}
 

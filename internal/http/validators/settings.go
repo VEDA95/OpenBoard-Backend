@@ -7,8 +7,8 @@ type SettingsTypeValidator struct {
 type GeneralSettingsValidator struct {
 	AppName                *string `json:"app_name,omitempty" validate:"optional"`
 	AppURL                 *string `json:"app_url" validate:"optional,min=12"`
-	AppLogo                *string `json:"app_logo" validate:"optional,min=7"`
-	AppFavicon             *string `json:"app_favicon" validate:"optional,min=7"`
+	AppLogoID              *string `json:"app_logo" validate:"optional,uuid"`
+	AppFaviconID           *string `json:"app_favicon" validate:"optional,uuid"`
 	AppDescription         *string `json:"app_description" validate:"optional"`
 	ShowAnnouncementBanner *bool   `json:"show_announcement_banner" validate:"optional"`
 	AnnouncementMessage    *string `json:"announcement_messange" validate:"optional"`

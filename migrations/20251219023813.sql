@@ -61,8 +61,8 @@ CREATE TABLE "public"."general_settings" (
   "updated_at" timestamptz NULL,
   "app_name" character varying(100) NOT NULL DEFAULT 'Kanban Board',
   "app_url" character varying(255) NOT NULL DEFAULT 'http://localhost:3000',
-  "app_logo" text NULL,
-  "app_favicon" text NULL,
+  "app_logo_id" uuid NULL,
+  "app_favicon_id" uuid NULL,
   "app_description" text NULL,
   "show_announcement_banner" boolean NULL DEFAULT false,
   "announcement_message" text NULL,
@@ -72,5 +72,7 @@ CREATE TABLE "public"."general_settings" (
   "default_items_per_page" bigint NULL DEFAULT 25,
   "max_file_size" bigint NULL DEFAULT 1024,
   PRIMARY KEY ("id"),
+  CONSTRAINT "fk_general_settings_app_favicon" FOREIGN KEY ("app_favicon_id") REFERENCES "public"."file_uploads" ("id") ON UPDATE NO ACTION ON DELETE NO ACTION,
+  CONSTRAINT "fk_general_settings_app_logo" FOREIGN KEY ("app_logo_id") REFERENCES "public"."file_uploads" ("id") ON UPDATE NO ACTION ON DELETE NO ACTION,
   CONSTRAINT "check_single_row_general" CHECK (id = 1)
 );
