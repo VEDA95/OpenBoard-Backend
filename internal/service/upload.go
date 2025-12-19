@@ -57,7 +57,7 @@ func (fileUploadService *FileUploadService) UploadFileAsUserThumbnail(user *mode
 		return nil, err
 	}
 
-	user.ThumbnailID = fileData.ID
+	user.ThumbnailID = &fileData.ID
 
 	if err := fileUploadService.userRepo.Update(user, repository.QueryOptions{Select: []string{"thumbnail_id"}}); err != nil {
 		return nil, err
