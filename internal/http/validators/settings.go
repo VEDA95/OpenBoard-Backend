@@ -43,7 +43,6 @@ type EmailSettingsValidator struct {
 	EmailEnabled             *bool   `json:"email_enabled" validate:"optional"`
 	EmailFromAddress         *string `json:"email_from_address" validate:"optional"`
 	EmailFromName            *string `json:"email_from_name" validate:"optional"`
-	EmailReplyTo             *string `json:"email_reply_to" validate:"optional"`
 	SMTPHost                 *string `json:"smtp_host" validate:"optional"`
 	SMTPPort                 *int    `json:"smtp_port" validate:"optional"`
 	SMTPUsername             *string `json:"smtp_username" validate:"optional"`
@@ -51,12 +50,9 @@ type EmailSettingsValidator struct {
 	SMTPEncryption           *string `json:"smtp_encryption" validate:"optional,oneof=tls ssl none"`                   // tls, ssl, none
 	SMTPAuthMethod           *string `json:"smtp_auth_method" validate:"optional,oneof=plain login, cram-md5, noauth"` // plain, login, cram-md5
 	SMTPVerifySSL            *bool   `json:"smtp_verify_ssl" validate:"optional"`
-	SMTPTimeout              *int    `json:"smtp_timeout" validate:"optional"` // seconds
-	SMTPPoolSize             *int    `json:"smtp_pool_size" validate:"optional"`
 	SendGridAPIKey           *string `json:"sendgrid_api_key" validate:"optional"`
 	MailgunAPIKey            *string `json:"mailgun_api_key" validate:"optional"`
 	MailgunDomain            *string `json:"mailgun_domain" validate:"optional"`
-	MailgunRegion            *string `json:"mailgun_region" validate:"optional"` // us, eu
 	SESAccessKeyID           *string `json:"ses_access_key_id" validate:"optional"`
 	SESSecretAccessKey       *string `json:"ses_secret_access_key" validate:"optional"`
 	SESRegion                *string `json:"ses_region" validate:"optional"`

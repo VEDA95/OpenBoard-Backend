@@ -257,10 +257,6 @@ func (settingsService *SettingsService) UpdateEmailSettings(data *validators.Ema
 		emailSettings.EmailFromName = data.EmailFromName
 	}
 
-	if data.EmailReplyTo != nil && data.EmailReplyTo != emailSettings.EmailReplyTo {
-		emailSettings.EmailReplyTo = data.EmailReplyTo
-	}
-
 	if data.SMTPHost != nil && data.SMTPHost != emailSettings.SMTPHost {
 		emailSettings.SMTPHost = data.SMTPHost
 	}
@@ -285,20 +281,8 @@ func (settingsService *SettingsService) UpdateEmailSettings(data *validators.Ema
 		emailSettings.SMTPEncryption = data.SMTPEncryption
 	}
 
-	if data.SMTPPoolSize != nil && *data.SMTPPoolSize != emailSettings.SMTPPoolSize {
-		emailSettings.SMTPPoolSize = *data.SMTPPoolSize
-	}
-
-	if data.SMTPTimeout != nil && *data.SMTPTimeout != emailSettings.SMTPTimeout {
-		emailSettings.SMTPTimeout = *data.SMTPTimeout
-	}
-
 	if data.SendGridAPIKey != nil && data.SendGridAPIKey != emailSettings.SendGridAPIKey {
 		emailSettings.SendGridAPIKey = data.SendGridAPIKey
-	}
-
-	if data.SendGridWebhookSecret != nil && data.SendGridWebhookSecret != emailSettings.SendGridWebhookSecret {
-		emailSettings.SendGridWebhookSecret = data.SendGridWebhookSecret
 	}
 
 	if data.MailgunAPIKey != nil && data.MailgunAPIKey != emailSettings.MailgunAPIKey {
@@ -307,10 +291,6 @@ func (settingsService *SettingsService) UpdateEmailSettings(data *validators.Ema
 
 	if data.MailgunDomain != nil && data.MailgunDomain != emailSettings.MailgunDomain {
 		emailSettings.MailgunDomain = data.MailgunDomain
-	}
-
-	if data.MailgunRegion != nil && *data.MailgunRegion != emailSettings.MailgunRegion {
-		emailSettings.MailgunRegion = *data.MailgunRegion
 	}
 
 	if data.SESAccessKeyID != nil && data.SESAccessKeyID != emailSettings.SESAccessKeyID {
