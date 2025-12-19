@@ -68,7 +68,8 @@ func main() {
 	emailSettingsRepo := repository.NewEmailSettingsRepository(dbInstance)
 	emailService, err := service.NewEmailService(emailRepo, emailSettingsRepo)
 	if err != nil {
-		if !strings.Contains(err.Error(), "required email settings are missing") {
+		errMessage := err.Error()
+		if !strings.Contains(errMessage, "required email settings are missing") && !strings.Contains(errMessage, "valid email address for the sender is required") {
 			applogger.Global.Fatal().Err(err).Msg("")
 		}
 
