@@ -3,6 +3,7 @@ package email
 import (
 	models "VEDA95/open_board/api/internal/db/model"
 	"errors"
+	"fmt"
 
 	"github.com/keighl/postmark"
 )
@@ -30,8 +31,16 @@ func (mailClient *PostMarkClient) Send(senderAddress string, recipient string, b
 		return errors.New("postmark client is not initialized")
 	}
 
+	sender := ""
+
+	if subject != nil && len(*subject) > 0 {
+		sender = fmt.Sprintf("%s <%s>", senderAddress, *senderName)
+	} else {
+		sender = senderAddress
+	}
+
 	message := postmark.Email{
-		From:     senderAddress,
+		From:     sender,
 		To:       recipient,
 		Subject:  *subject,
 		HtmlBody: body,

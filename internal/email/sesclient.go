@@ -4,6 +4,7 @@ import (
 	models "VEDA95/open_board/api/internal/db/model"
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
@@ -50,8 +51,16 @@ func (mailClient *SESClient) Send(senderAddress string, recipient string, body s
 		return errors.New("ses client has not been initialized")
 	}
 
+	sender := ""
+
+	if subject != nil && len(*subject) > 0 {
+		sender = fmt.Sprintf("\"%s\" <%s>", senderAddress, *senderName)
+	} else {
+		sender = senderAddress
+	}
+
 	message := &sesv2.SendEmailInput{
-		FromEmailAddress: &senderAddress,
+		FromEmailAddress: &sender,
 		Destination:      &types.Destination{ToAddresses: []string{recipient}},
 		Content: &types.EmailContent{
 			Simple: &types.Message{

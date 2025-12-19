@@ -67,7 +67,7 @@ func (emailService *EmailService) InitializeClient() error {
 	}
 
 	if emailSettings.EmailProvider == "mailgun" {
-		emailService.client = &email.MainlGunClient{}
+		emailService.client = &email.MailGunClient{}
 	}
 
 	if emailSettings.EmailProvider == "ses" {

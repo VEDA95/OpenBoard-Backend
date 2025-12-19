@@ -6,6 +6,7 @@ import (
 	"VEDA95/open_board/api/internal/errors"
 	"VEDA95/open_board/api/internal/http/responses"
 	"VEDA95/open_board/api/internal/http/validators"
+	"VEDA95/open_board/api/internal/log"
 	"VEDA95/open_board/api/internal/service"
 	"fmt"
 	"strings"
@@ -327,16 +328,21 @@ func (authHandler *AuthHandler) LocalUnauthenticatedPasswordTokenIssuer(context 
 	}
 
 	go func() {
-		authHandler.emailService.SendMessage(
+		subject := "password-reset"
+
+		err := authHandler.emailService.SendMessage(
 			"Open Board Password Reset",
 			passwordResetToken.User.Email,
-			"password-reset",
 			auth.PasswordResetEmailVariables{
 				Token:    passwordResetToken.Token,
 				Email:    passwordResetToken.User.Email,
 				Username: passwordResetToken.User.Username,
 			},
+			&subject,
 		)
+		if err != nil {
+			log.Global.Warn().Err(err).Msg("an error occurred when sending a password reset email")
+		}
 	}()
 
 	return responses.JSONResponse(
