@@ -51,10 +51,12 @@ func (settingsHandler *SettingsHandler) GET(context *fiber.Ctx) error {
 			return responses.JSONResponse(context, fiber.StatusOK, responses.OKResponse(
 				fiber.StatusOK,
 				fiber.Map{
-					"allow_public_registration":  authSettings.AllowPublicRegistration,
-					"require_email_verification": authSettings.RequireEmailVerification,
-					"two_factor_authentication":  authSettings.TwoFactorAuthentication,
-					"invite_only_mode":           authSettings.InviteOnlyMode,
+					"allow_public_registration":          authSettings.AllowPublicRegistration,
+					"require_email_verification":         authSettings.RequireEmailVerification,
+					"two_factor_authentication":          authSettings.TwoFactorAuthentication,
+					"two_factor_authentication_required": authSettings.TwoFactorAuthentication,
+					"allow_user_invitations":             authSettings.AllowUserInvitations,
+					"invite_only_mode":                   authSettings.InviteOnlyMode,
 				},
 			))
 		}
@@ -81,6 +83,7 @@ func (settingsHandler *SettingsHandler) GET(context *fiber.Ctx) error {
 					"smtp_port":                  emailSettings.SMTPPort,
 					"smtp_encryption":            emailSettings.SMTPEncryption,
 					"enable_email_notifications": emailSettings.EnableEmailNotifications,
+					"send_password_reset_email":  emailSettings.SendPasswordResetEmail,
 					"notify_on_card_assigned":    emailSettings.NotifyOnCardAssigned,
 					"notify_on_card_comment":     emailSettings.NotifyOnCardComment,
 					"notify_on_card_due":         emailSettings.NotifyOnCardDue,
@@ -140,10 +143,12 @@ func (settingsHandler *SettingsHandler) GETPublic(context *fiber.Ctx) error {
 		return responses.JSONResponse(context, fiber.StatusOK, responses.OKResponse(
 			fiber.StatusOK,
 			fiber.Map{
-				"allow_public_registration":  authSettings.AllowPublicRegistration,
-				"require_email_verification": authSettings.RequireEmailVerification,
-				"two_factor_authentication":  authSettings.TwoFactorAuthentication,
-				"invite_only_mode":           authSettings.InviteOnlyMode,
+				"allow_public_registration":          authSettings.AllowPublicRegistration,
+				"require_email_verification":         authSettings.RequireEmailVerification,
+				"two_factor_authentication":          authSettings.TwoFactorAuthentication,
+				"two_factor_authentication_required": authSettings.TwoFactorAuthentication,
+				"allow_user_invitations":             authSettings.AllowUserInvitations,
+				"invite_only_mode":                   authSettings.InviteOnlyMode,
 			},
 		))
 	}
@@ -158,6 +163,7 @@ func (settingsHandler *SettingsHandler) GETPublic(context *fiber.Ctx) error {
 			fiber.StatusOK,
 			fiber.Map{
 				"email_enabled":              emailSettings.EmailEnabled,
+				"send_password_reset_email":  emailSettings.SendPasswordResetEmail,
 				"enable_email_notifications": emailSettings.EnableEmailNotifications,
 				"notify_on_card_assigned":    emailSettings.NotifyOnCardAssigned,
 				"notify_on_card_comment":     emailSettings.NotifyOnCardComment,
