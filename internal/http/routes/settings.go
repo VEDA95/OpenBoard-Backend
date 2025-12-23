@@ -1,6 +1,7 @@
 package routes
 
 import (
+	models "VEDA95/open_board/api/internal/db/model"
 	"VEDA95/open_board/api/internal/errors"
 	"VEDA95/open_board/api/internal/http/responses"
 	"VEDA95/open_board/api/internal/http/validators"
@@ -45,6 +46,19 @@ func (settingsHandler *SettingsHandler) GET(context *fiber.Ctx) error {
 			return err
 		}
 
+		session := context.Locals("auth_session").(models.Session)
+		if !session.User.IsSuperuser() && !session.User.IsAuthorized("system:settings") {
+			return responses.JSONResponse(context, fiber.StatusOK, responses.OKResponse(
+				fiber.StatusOK,
+				fiber.Map{
+					"allow_public_registration":  authSettings.AllowPublicRegistration,
+					"require_email_verification": authSettings.RequireEmailVerification,
+					"two_factor_authentication":  authSettings.TwoFactorAuthentication,
+					"invite_only_mode":           authSettings.InviteOnlyMode,
+				},
+			))
+		}
+
 		return responses.JSONResponse(context, fiber.StatusOK, responses.OKResponse(fiber.StatusOK, authSettings))
 	}
 
@@ -52,6 +66,28 @@ func (settingsHandler *SettingsHandler) GET(context *fiber.Ctx) error {
 		emailSettings, err := settingsHandler.settingsService.GetEmailSettings()
 		if err != nil {
 			return err
+		}
+
+		session := context.Locals("auth_session").(models.Session)
+		if !session.User.IsSuperuser() && !session.User.IsAuthorized("system:settings") {
+			return responses.JSONResponse(context, fiber.StatusOK, responses.OKResponse(
+				fiber.StatusOK,
+				fiber.Map{
+					"email_provider":             emailSettings.EmailProvider,
+					"email_enabled":              emailSettings.EmailEnabled,
+					"email_from_address":         emailSettings.EmailFromAddress,
+					"email_from_name":            emailSettings.EmailFromName,
+					"smtp_host":                  emailSettings.SMTPHost,
+					"smtp_port":                  emailSettings.SMTPPort,
+					"smtp_encryption":            emailSettings.SMTPEncryption,
+					"enable_email_notifications": emailSettings.EnableEmailNotifications,
+					"notify_on_card_assigned":    emailSettings.NotifyOnCardAssigned,
+					"notify_on_card_comment":     emailSettings.NotifyOnCardComment,
+					"notify_on_card_due":         emailSettings.NotifyOnCardDue,
+					"notify_on_board_invite":     emailSettings.NotifyOnBoardInvite,
+					"notify_on_mention":          emailSettings.NotifyOnMention,
+				},
+			))
 		}
 
 		return responses.JSONResponse(context, fiber.StatusOK, responses.OKResponse(fiber.StatusOK, emailSettings))
@@ -62,7 +98,96 @@ func (settingsHandler *SettingsHandler) GET(context *fiber.Ctx) error {
 		return err
 	}
 
+	session := context.Locals("auth_session").(models.Session)
+	if !session.User.IsSuperuser() && !session.User.IsAuthorized("system:settings") {
+		return responses.JSONResponse(context, fiber.StatusOK, responses.OKResponse(
+			fiber.StatusOK,
+			fiber.Map{
+				"app_name":                 generalSettings.AppName,
+				"app_logo":                 generalSettings.AppLogo,
+				"app_favicon":              generalSettings.AppFavicon,
+				"app_description":          generalSettings.AppDescription,
+				"default_language":         generalSettings.DefaultLanguage,
+				"default_timezone":         generalSettings.DefaultTimezone,
+				"show_announcement_banner": generalSettings.ShowAnnouncementBanner,
+				"announcement_message":     generalSettings.AnnouncementMessage,
+				"announcement_type":        generalSettings.AnnouncementType,
+				"max_file_size":            generalSettings.MaxFileSize,
+			},
+		))
+	}
+
 	return responses.JSONResponse(context, fiber.StatusOK, responses.OKResponse(fiber.StatusOK, generalSettings))
+}
+
+func (settingsHandler *SettingsHandler) GETPublic(context *fiber.Ctx) error {
+	paramsData := new(validators.SettingsTypeValidator)
+
+	if err := context.ParamsParser(paramsData); err != nil {
+		return err
+	}
+
+	if errs := settingsHandler.validator.Validate(paramsData); len(errs) > 0 {
+		return errors.CreateValidationError(errs)
+	}
+
+	if paramsData.Type == "auth" {
+		authSettings, err := settingsHandler.settingsService.GetAuthSettings()
+		if err != nil {
+			return err
+		}
+
+		return responses.JSONResponse(context, fiber.StatusOK, responses.OKResponse(
+			fiber.StatusOK,
+			fiber.Map{
+				"allow_public_registration":  authSettings.AllowPublicRegistration,
+				"require_email_verification": authSettings.RequireEmailVerification,
+				"two_factor_authentication":  authSettings.TwoFactorAuthentication,
+				"invite_only_mode":           authSettings.InviteOnlyMode,
+			},
+		))
+	}
+
+	if paramsData.Type == "email" {
+		emailSettings, err := settingsHandler.settingsService.GetEmailSettings()
+		if err != nil {
+			return err
+		}
+
+		return responses.JSONResponse(context, fiber.StatusOK, responses.OKResponse(
+			fiber.StatusOK,
+			fiber.Map{
+				"email_enabled":              emailSettings.EmailEnabled,
+				"enable_email_notifications": emailSettings.EnableEmailNotifications,
+				"notify_on_card_assigned":    emailSettings.NotifyOnCardAssigned,
+				"notify_on_card_comment":     emailSettings.NotifyOnCardComment,
+				"notify_on_card_due":         emailSettings.NotifyOnCardDue,
+				"notify_on_board_invite":     emailSettings.NotifyOnBoardInvite,
+				"notify_on_mention":          emailSettings.NotifyOnMention,
+			},
+		))
+	}
+
+	generalSettings, err := settingsHandler.settingsService.GetGeneralSettings()
+	if err != nil {
+		return err
+	}
+
+	return responses.JSONResponse(context, fiber.StatusOK, responses.OKResponse(
+		fiber.StatusOK,
+		fiber.Map{
+			"app_name":                 generalSettings.AppName,
+			"app_logo":                 generalSettings.AppLogo,
+			"app_favicon":              generalSettings.AppFavicon,
+			"app_description":          generalSettings.AppDescription,
+			"default_language":         generalSettings.DefaultLanguage,
+			"default_timezone":         generalSettings.DefaultTimezone,
+			"show_announcement_banner": generalSettings.ShowAnnouncementBanner,
+			"announcement_message":     generalSettings.AnnouncementMessage,
+			"announcement_type":        generalSettings.AnnouncementType,
+			"max_file_size":            generalSettings.MaxFileSize,
+		},
+	))
 }
 
 func (settingsHandler *SettingsHandler) PATCH(context *fiber.Ctx) error {

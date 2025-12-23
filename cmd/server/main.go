@@ -158,7 +158,13 @@ func main() {
 	authGroup.Patch("/permissions/:id", authMiddleware.RequireAuthentication(), permissionHandler.PATCH)
 	authGroup.Delete("/permissions/:id", authMiddleware.RequireAuthentication(), permissionHandler.DELETE)
 	apiGroup.Get("/settings/:type", authMiddleware.RequireAuthentication(), settingsHandler.GET)
-	apiGroup.Patch("/settings/:type", authMiddleware.RequireAuthentication(), settingsHandler.PATCH)
+	apiGroup.Get("/settings/:type/public", settingsHandler.GETPublic)
+	apiGroup.Patch(
+		"/settings/:type",
+		authMiddleware.RequireAuthentication(),
+		authMiddleware.RequireAuthorization("system:settings"),
+		settingsHandler.PATCH,
+	)
 	apiGroup.Get("/users", authMiddleware.RequireAuthentication(), userHandler.GET)
 	apiGroup.Post("/users", authMiddleware.RequireAuthentication(), userHandler.POST)
 	apiGroup.Get("/users/:id", authMiddleware.RequireAuthentication(), userHandler.GETByID)
