@@ -40,7 +40,7 @@ type RegisterUserValidator struct {
 	Username        string  `json:"username" validate:"required,min=1"`
 	Email           string  `json:"email" validate:"required,email"`
 	Password        string  `json:"password" validate:"required,min=8,max=32"`
-	ConfirmPassword string  `validate:"required,eqfield=Password"`
+	ConfirmPassword string  `json:"confirm_password" validate:"required,eqfield=Password"`
 	FirstName       *string `json:"first_name,omitempty" validate:"omitempty,min=1"`
 	LastName        *string `json:"last_name,omitempty" validate:"omitempty,min=1"`
 }

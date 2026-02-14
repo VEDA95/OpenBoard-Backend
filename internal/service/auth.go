@@ -364,7 +364,7 @@ func (authService *AuthService) RegisterUser(data *validators.RegisterUserValida
 		return errors.New("user already exists")
 	}
 
-	userRole, err := authService.roleRepo.FindByName("user", repository.QueryOptions{
+	userRole, err := authService.roleRepo.FindByName(authSettings.DefaultUserRole, repository.QueryOptions{
 		Select: []string{"id"},
 	})
 	if err != nil {

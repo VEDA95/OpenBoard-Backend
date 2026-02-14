@@ -117,3 +117,11 @@ func (userRepo *UserRepository) ExistsByUsernameOrEmail(username string, email s
 
 	return exists
 }
+
+func (userRepo *UserRepository) ExistsByUsername(username string) bool {
+	exists := false
+
+	userRepo.db.Raw("SELECT EXISTS(SELECT 1 FROM users WHERE username = ?) AS found", username).Find(&exists)
+
+	return exists
+}

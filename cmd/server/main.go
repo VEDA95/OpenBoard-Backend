@@ -11,6 +11,7 @@ import (
 	"VEDA95/open_board/api/internal/http/validators"
 	applogger "VEDA95/open_board/api/internal/log"
 	"VEDA95/open_board/api/internal/service"
+	"VEDA95/open_board/api/internal/websocket"
 	"fmt"
 	"log"
 	"os"
@@ -19,7 +20,6 @@ import (
 	"github.com/goccy/go-json"
 	"github.com/gofiber/contrib/fiberzerolog"
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/swagger"
 )
 
@@ -90,6 +90,9 @@ func main() {
 	commentRepo := repository.NewCommentRepository(dbInstance)
 	activityRepo := repository.NewActivityRepository(dbInstance)
 	fileUploadRepo := repository.NewFileUploadRepository(dbInstance)
+	externalProviderRepo := repository.NewExternalAuthProviderRepository(dbInstance)
+	emailVerificationRepo := repository.NewEmailVerificationRepository(dbInstance)
+	multiAuthRepo := repository.NewMultiAuthMethodRepository(dbInstance)
 	settingsService := service.NewSettingsService(generalSettingsRepo, authSettingsRepo, emailSettingsRepo)
 	userService := service.NewUserService(userRepo, roleRepo)
 	authService := service.NewAuthService(sessionRepo, userRepo, passwordResetRepo, roleRepo, authSettingsRepo)
@@ -103,19 +106,26 @@ func main() {
 	checkListItemService := service.NewCheckListItemService(checkListItemRepo, cardRepo, activityRepo)
 	commentService := service.NewCommentService(commentRepo, cardRepo)
 	fileUploadService := service.NewFileUploadService(fileUploadRepo, userRepo, cardRepo)
+	externalProviderService := service.NewExternalAuthProviderService(externalProviderRepo, userRepo, sessionRepo, roleRepo, authSettingsRepo)
+	emailVerificationService := service.NewEmailVerificationService(emailVerificationRepo, userRepo, authSettingsRepo)
+	multiAuthService := service.NewMultiAuthService(multiAuthRepo, userRepo, authSettingsRepo)
 	validator := validators.NewValidator()
+	wsManager := websocket.NewWebsocketConnectionManager(authService, validator)
 	settingsHandler := routes.NewSettingsHandler(settingsService, emailService, validator)
 	userHandler := routes.NewUserHandler(userService, fileUploadService, validator)
-	authHandler := routes.NewAuthHandler(authService, userService, emailService, validator)
+	authHandler := routes.NewAuthHandler(authService, userService, emailService, settingsService, validator)
 	roleHandler := routes.NewRoleHandler(roleService, validator)
 	permissionHandler := routes.NewPermissionHandler(permissionService, validator)
 	workspaceHandler := routes.NewWorkspaceHandler(workspaceService, validator)
 	boardHandler := routes.NewBoardHandler(boardService, validator)
-	listHandler := routes.NewListHandler(listService, validator)
-	cardHandler := routes.NewCardHandler(cardService, validator)
+	listHandler := routes.NewListHandler(listService, wsManager, validator)
+	cardHandler := routes.NewCardHandler(cardService, wsManager, validator)
 	labelHandler := routes.NewLabelHandler(labelService, validator)
 	checkListItemHandler := routes.NewCheckListItemHandler(checkListItemService, validator)
 	commentHandler := routes.NewCommentHandler(commentService, validator)
+	externalProviderHandler := routes.NewExternalProviderHandler(externalProviderService, settingsService, validator)
+	emailVerificationHandler := routes.NewEmailVerificationHandler(emailVerificationService, emailService, validator)
+	multiAuthHandler := routes.NewMultiAuthHandler(multiAuthService, emailService, validator)
 	authMiddleware := middleware.NewAuthMiddleware(authService)
 
 	app := fiber.New(fiber.Config{
@@ -127,12 +137,10 @@ func main() {
 	authGroup := app.Group("/auth")
 
 	app.Use(fiberzerolog.New(fiberzerolog.Config{Logger: applogger.Global}))
-	app.Use(cors.New(cors.Config{
-		AllowOrigins:     "http://localhost:3000",
-		AllowMethods:     "GET, POST, PUT, PATCH, DELETE",
-		AllowHeaders:     "Origin, Content-Type, Accept, Authorization",
-		AllowCredentials: true,
-	}))
+
+	// Dynamic CORS middleware that reads origins from database with caching
+	corsMiddleware := middleware.NewCORSMiddleware(authSettingsRepo)
+	app.Use(corsMiddleware.Handler())
 	app.Get("/swagger/*", swagger.HandlerDefault)
 	authGroup.Post("/register", authHandler.Register)
 	authGroup.Post("/login", authHandler.LocalLogin)
@@ -206,6 +214,41 @@ func main() {
 	apiGroup.Get("/comments/:id", authMiddleware.RequireAuthentication(), commentHandler.GETByID)
 	apiGroup.Patch("/comments/:id", authMiddleware.RequireAuthentication(), commentHandler.PATCH)
 	apiGroup.Delete("/comments/:id", authMiddleware.RequireAuthentication(), commentHandler.DELETE)
+
+	// OAuth/SSO routes
+	authGroup.Get("/oauth/providers", authMiddleware.RequireAuthentication(), externalProviderHandler.GET)
+	authGroup.Get("/oauth/providers/enabled", externalProviderHandler.GETEnabled)
+	authGroup.Get("/oauth/providers/:id", authMiddleware.RequireAuthentication(), externalProviderHandler.GETByID)
+	authGroup.Post("/oauth/providers", authMiddleware.RequireAuthentication(), authMiddleware.RequireAuthorization("system:settings"), externalProviderHandler.POST)
+	authGroup.Patch("/oauth/providers/:id", authMiddleware.RequireAuthentication(), authMiddleware.RequireAuthorization("system:settings"), externalProviderHandler.PATCH)
+	authGroup.Delete("/oauth/providers/:id", authMiddleware.RequireAuthentication(), authMiddleware.RequireAuthorization("system:settings"), externalProviderHandler.DELETE)
+	authGroup.Get("/oauth/authorize/:id", externalProviderHandler.Authorize)
+	authGroup.Post("/oauth/callback/:id", externalProviderHandler.Callback)
+
+	// Email verification routes
+	authGroup.Post("/email/verify/send", authMiddleware.RequireAuthentication(), emailVerificationHandler.SendVerificationEmail)
+	authGroup.Get("/email/verify/:id", emailVerificationHandler.VerifyEmail)
+	authGroup.Post("/email/verify/resend", authMiddleware.RequireAuthentication(), emailVerificationHandler.ResendVerificationEmail)
+	authGroup.Get("/email/verify/status", authMiddleware.RequireAuthentication(), emailVerificationHandler.GetVerificationStatus)
+
+	// MFA routes
+	authGroup.Get("/mfa/methods", authMiddleware.RequireAuthentication(), multiAuthHandler.GetMFAMethods)
+	authGroup.Get("/mfa/status", authMiddleware.RequireAuthentication(), multiAuthHandler.GetMFAStatus)
+	authGroup.Delete("/mfa/methods/:id", authMiddleware.RequireAuthentication(), multiAuthHandler.DeleteMFAMethod)
+	// Email TOTP
+	authGroup.Post("/mfa/email-totp/setup", authMiddleware.RequireAuthentication(), multiAuthHandler.SetupEmailTOTP)
+	authGroup.Post("/mfa/email-totp/send", authMiddleware.RequireAuthentication(), multiAuthHandler.SendEmailTOTPCode)
+	authGroup.Post("/mfa/email-totp/verify", authMiddleware.RequireAuthentication(), multiAuthHandler.VerifyEmailTOTPCode)
+	// WebAuthn
+	authGroup.Get("/mfa/webauthn/register/options", authMiddleware.RequireAuthentication(), multiAuthHandler.GetWebAuthnRegistrationOptions)
+	authGroup.Post("/mfa/webauthn/register", authMiddleware.RequireAuthentication(), multiAuthHandler.SetupWebAuthn)
+	authGroup.Get("/mfa/webauthn/authenticate/options", authMiddleware.RequireAuthentication(), multiAuthHandler.GetWebAuthnAuthenticationOptions)
+	authGroup.Post("/mfa/webauthn/authenticate", authMiddleware.RequireAuthentication(), multiAuthHandler.VerifyWebAuthn)
+	authGroup.Get("/mfa/webauthn/credentials", authMiddleware.RequireAuthentication(), multiAuthHandler.GetWebAuthnCredentials)
+
+	// WebSocket endpoint
+	app.Use("/ws", wsManager.RequireConnectionUpgrade)
+	app.Get("/ws", authMiddleware.RequireAuthentication(), wsManager.ListenToConnection())
 
 	if err := app.Listen(hostString); err != nil {
 		applogger.Global.Fatal().Err(err).Msg("Error occurred while running the server")

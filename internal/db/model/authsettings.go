@@ -25,6 +25,7 @@ type AuthSettings struct {
 	TwoFactorAuthentication  bool       `gorm:"default:false" json:"two_factor_authentication"`
 	TwoFactorRequired        bool       `gorm:"default:false" json:"two_factor_required"`
 	EnableOAuth              bool       `gorm:"default:false" json:"enable_oauth"`
+	CORSDomain               string     `gorm:"type:varchar(255); not null" json:"cors_domain"`
 }
 
 func (a *AuthSettings) BeforeCreate(tx *gorm.DB) error {

@@ -206,7 +206,7 @@ func (workspaceService *WorkspaceService) UpdateWorkspace(ID string, user *model
 	}
 
 	if data.Description != nil && *data.Description != *workspace.Description {
-		workspace.Name = *data.Description
+		workspace.Description = data.Description
 	}
 
 	if data.UserID != nil && *data.UserID != workspace.UserID {

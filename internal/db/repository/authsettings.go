@@ -2,6 +2,7 @@ package repository
 
 import (
 	models "VEDA95/open_board/api/internal/db/model"
+	"os"
 
 	"gorm.io/gorm"
 )
@@ -27,7 +28,13 @@ func (generalSettingsRepo *AuthSettingsRepository) Find() (*models.AuthSettings,
 }
 
 func (generalSettingsRepo *AuthSettingsRepository) Create() error {
-	return generalSettingsRepo.db.Create(&models.AuthSettings{}).Error
+	frontendURL := os.Getenv("FRONTEND_URL")
+
+	if len(frontendURL) == 0 {
+		frontendURL = "http://localhost:3000"
+	}
+
+	return generalSettingsRepo.db.Create(&models.AuthSettings{CORSDomain: frontendURL}).Error
 }
 
 func (generalSettingsRepo *AuthSettingsRepository) Update(settings *models.AuthSettings) error {
