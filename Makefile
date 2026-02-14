@@ -34,7 +34,7 @@ run_dev_reset_password_program:
 	$(GO_RUN) $(RESET_PASSWORD_ENTRYPOINT)
 
 build_swagger_documentation:
-	swag init --parseDependency -g $(API_ENTRYPOINT)
+	swag init --parseDependency --parseInternal -g $(API_ENTRYPOINT)
 
 clean:
 	go clean -cache -modcache

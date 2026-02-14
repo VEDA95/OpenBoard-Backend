@@ -16,16 +16,91 @@ definitions:
         x-nullable: true
         x-omitempty: true
       user:
-        $ref: '#/definitions/VEDA95_open_board_api_internal_auth.User'
+        $ref: '#/definitions/VEDA95_open_board_api_internal_db_model.User'
     type: object
-  VEDA95_open_board_api_internal_auth.Permission:
+  VEDA95_open_board_api_internal_db_model.ExternalAuthProvider:
+    properties:
+      auth_url:
+        type: string
+      client_id:
+        type: string
+      client_secret:
+        type: string
+      created_at:
+        type: string
+      default_login_method:
+        type: boolean
+      id:
+        type: string
+      login_url:
+        type: string
+      logout_url:
+        type: string
+      name:
+        type: string
+      permissions:
+        items:
+          $ref: '#/definitions/VEDA95_open_board_api_internal_db_model.Permission'
+        type: array
+      required_email_domain:
+        type: string
+      self_registration_enabled:
+        type: boolean
+      updated_at:
+        type: string
+      use_pkce:
+        type: boolean
+      userinfo_url:
+        type: string
+    type: object
+  VEDA95_open_board_api_internal_db_model.FileUpload:
+    properties:
+      additional_details:
+        items:
+          type: integer
+        type: array
+      created_at:
+        type: string
+      description:
+        type: string
+      extension:
+        type: string
+      id:
+        type: string
+      path:
+        type: string
+      size:
+        type: integer
+      type:
+        type: string
+      updated_at:
+        type: string
+      user:
+        $ref: '#/definitions/VEDA95_open_board_api_internal_db_model.User'
+    type: object
+  VEDA95_open_board_api_internal_db_model.MultiAuthMethod:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      type:
+        type: string
+      updated_at:
+        type: string
+      user:
+        $ref: '#/definitions/VEDA95_open_board_api_internal_db_model.User'
+    type: object
+  VEDA95_open_board_api_internal_db_model.Permission:
     properties:
       id:
         type: string
       path:
         type: string
     type: object
-  VEDA95_open_board_api_internal_auth.Role:
+  VEDA95_open_board_api_internal_db_model.Role:
     properties:
       id:
         type: string
@@ -33,28 +108,38 @@ definitions:
         type: string
       permissions:
         items:
-          $ref: '#/definitions/VEDA95_open_board_api_internal_auth.RolePermission'
+          $ref: '#/definitions/VEDA95_open_board_api_internal_db_model.Permission'
         type: array
     type: object
-  VEDA95_open_board_api_internal_auth.RolePermission:
+  VEDA95_open_board_api_internal_db_model.Session:
     properties:
+      created_at:
+        type: string
       id:
         type: string
-      path:
+      ip_address:
+        type: string
+      updated_at:
+        type: string
+      user_agent:
         type: string
     type: object
-  VEDA95_open_board_api_internal_auth.User:
+  VEDA95_open_board_api_internal_db_model.User:
     properties:
-      date_created:
+      created_at:
         type: string
-      date_updated:
-        type: string
-      email_address:
+      email:
         type: string
       email_verified:
+        default: false
         type: boolean
       enabled:
+        default: true
         type: boolean
+      files:
+        items:
+          $ref: '#/definitions/VEDA95_open_board_api_internal_db_model.FileUpload'
+        type: array
       first_name:
         type: string
       id:
@@ -65,22 +150,13 @@ definitions:
         type: string
       roles:
         items:
-          $ref: '#/definitions/VEDA95_open_board_api_internal_auth.Role'
+          $ref: '#/definitions/VEDA95_open_board_api_internal_db_model.Role'
         type: array
+      thumbnail:
+        $ref: '#/definitions/VEDA95_open_board_api_internal_db_model.FileUpload'
+      updated_at:
+        type: string
       username:
-        type: string
-    type: object
-  VEDA95_open_board_api_internal_auth.UserSessionReadOnly:
-    properties:
-      date_created:
-        type: string
-      date_updated:
-        type: string
-      id:
-        type: string
-      ip_address:
-        type: string
-      user_agent:
         type: string
     type: object
   VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage:
@@ -102,7 +178,7 @@ definitions:
       message:
         type: string
     type: object
-  VEDA95_open_board_api_internal_http_responses.OkCollectionResponse-VEDA95_open_board_api_internal_auth_Permission:
+  VEDA95_open_board_api_internal_http_responses.OkCollectionResponse-VEDA95_open_board_api_internal_db_model_ExternalAuthProvider:
     properties:
       code:
         type: integer
@@ -110,10 +186,10 @@ definitions:
         type: integer
       data:
         items:
-          $ref: '#/definitions/VEDA95_open_board_api_internal_auth.Permission'
+          $ref: '#/definitions/VEDA95_open_board_api_internal_db_model.ExternalAuthProvider'
         type: array
     type: object
-  VEDA95_open_board_api_internal_http_responses.OkCollectionResponse-VEDA95_open_board_api_internal_auth_Role:
+  VEDA95_open_board_api_internal_http_responses.OkCollectionResponse-VEDA95_open_board_api_internal_db_model_MultiAuthMethod:
     properties:
       code:
         type: integer
@@ -121,10 +197,10 @@ definitions:
         type: integer
       data:
         items:
-          $ref: '#/definitions/VEDA95_open_board_api_internal_auth.Role'
+          $ref: '#/definitions/VEDA95_open_board_api_internal_db_model.MultiAuthMethod'
         type: array
     type: object
-  VEDA95_open_board_api_internal_http_responses.OkCollectionResponse-VEDA95_open_board_api_internal_auth_User:
+  VEDA95_open_board_api_internal_http_responses.OkCollectionResponse-VEDA95_open_board_api_internal_db_model_Permission:
     properties:
       code:
         type: integer
@@ -132,10 +208,10 @@ definitions:
         type: integer
       data:
         items:
-          $ref: '#/definitions/VEDA95_open_board_api_internal_auth.User'
+          $ref: '#/definitions/VEDA95_open_board_api_internal_db_model.Permission'
         type: array
     type: object
-  VEDA95_open_board_api_internal_http_responses.OkCollectionResponse-VEDA95_open_board_api_internal_auth_UserSessionReadOnly:
+  VEDA95_open_board_api_internal_http_responses.OkCollectionResponse-VEDA95_open_board_api_internal_db_model_Role:
     properties:
       code:
         type: integer
@@ -143,29 +219,58 @@ definitions:
         type: integer
       data:
         items:
-          $ref: '#/definitions/VEDA95_open_board_api_internal_auth.UserSessionReadOnly'
+          $ref: '#/definitions/VEDA95_open_board_api_internal_db_model.Role'
         type: array
     type: object
-  VEDA95_open_board_api_internal_http_responses.OkResponse-VEDA95_open_board_api_internal_auth_Permission:
+  VEDA95_open_board_api_internal_http_responses.OkCollectionResponse-VEDA95_open_board_api_internal_db_model_Session:
     properties:
       code:
         type: integer
+      count:
+        type: integer
       data:
-        $ref: '#/definitions/VEDA95_open_board_api_internal_auth.Permission'
+        items:
+          $ref: '#/definitions/VEDA95_open_board_api_internal_db_model.Session'
+        type: array
     type: object
-  VEDA95_open_board_api_internal_http_responses.OkResponse-VEDA95_open_board_api_internal_auth_Role:
+  VEDA95_open_board_api_internal_http_responses.OkCollectionResponse-VEDA95_open_board_api_internal_db_model_User:
     properties:
       code:
         type: integer
+      count:
+        type: integer
       data:
-        $ref: '#/definitions/VEDA95_open_board_api_internal_auth.Role'
+        items:
+          $ref: '#/definitions/VEDA95_open_board_api_internal_db_model.User'
+        type: array
     type: object
-  VEDA95_open_board_api_internal_http_responses.OkResponse-VEDA95_open_board_api_internal_auth_User:
+  VEDA95_open_board_api_internal_http_responses.OkResponse-VEDA95_open_board_api_internal_db_model_ExternalAuthProvider:
     properties:
       code:
         type: integer
       data:
-        $ref: '#/definitions/VEDA95_open_board_api_internal_auth.User'
+        $ref: '#/definitions/VEDA95_open_board_api_internal_db_model.ExternalAuthProvider'
+    type: object
+  VEDA95_open_board_api_internal_http_responses.OkResponse-VEDA95_open_board_api_internal_db_model_Permission:
+    properties:
+      code:
+        type: integer
+      data:
+        $ref: '#/definitions/VEDA95_open_board_api_internal_db_model.Permission'
+    type: object
+  VEDA95_open_board_api_internal_http_responses.OkResponse-VEDA95_open_board_api_internal_db_model_Role:
+    properties:
+      code:
+        type: integer
+      data:
+        $ref: '#/definitions/VEDA95_open_board_api_internal_db_model.Role'
+    type: object
+  VEDA95_open_board_api_internal_http_responses.OkResponse-VEDA95_open_board_api_internal_db_model_User:
+    properties:
+      code:
+        type: integer
+      data:
+        $ref: '#/definitions/VEDA95_open_board_api_internal_db_model.User'
     type: object
   VEDA95_open_board_api_internal_http_responses.OkResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage:
     properties:
@@ -173,6 +278,26 @@ definitions:
         type: integer
       data:
         $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.GenericMessage'
+    type: object
+  VEDA95_open_board_api_internal_http_responses.OkResponse-fiber_Map:
+    properties:
+      code:
+        type: integer
+      data:
+        $ref: '#/definitions/fiber.Map'
+    type: object
+  VEDA95_open_board_api_internal_http_responses.SuccessCollectionResponse-VEDA95_open_board_api_internal_db_model_MultiAuthMethod:
+    properties:
+      code:
+        type: integer
+      count:
+        type: integer
+      data:
+        items:
+          $ref: '#/definitions/VEDA95_open_board_api_internal_db_model.MultiAuthMethod'
+        type: array
+      message:
+        type: string
     type: object
   VEDA95_open_board_api_internal_http_responses.SuccessResponse-VEDA95_open_board_api_internal_auth_LocalUserLogin:
     properties:
@@ -183,32 +308,113 @@ definitions:
       message:
         type: string
     type: object
-  VEDA95_open_board_api_internal_http_responses.SuccessResponse-VEDA95_open_board_api_internal_auth_Permission:
+  VEDA95_open_board_api_internal_http_responses.SuccessResponse-VEDA95_open_board_api_internal_db_model_ExternalAuthProvider:
     properties:
       code:
         type: integer
       data:
-        $ref: '#/definitions/VEDA95_open_board_api_internal_auth.Permission'
+        $ref: '#/definitions/VEDA95_open_board_api_internal_db_model.ExternalAuthProvider'
       message:
         type: string
     type: object
-  VEDA95_open_board_api_internal_http_responses.SuccessResponse-VEDA95_open_board_api_internal_auth_Role:
+  VEDA95_open_board_api_internal_http_responses.SuccessResponse-VEDA95_open_board_api_internal_db_model_MultiAuthMethod:
     properties:
       code:
         type: integer
       data:
-        $ref: '#/definitions/VEDA95_open_board_api_internal_auth.Role'
+        $ref: '#/definitions/VEDA95_open_board_api_internal_db_model.MultiAuthMethod'
       message:
         type: string
     type: object
-  VEDA95_open_board_api_internal_http_responses.SuccessResponse-VEDA95_open_board_api_internal_auth_User:
+  VEDA95_open_board_api_internal_http_responses.SuccessResponse-VEDA95_open_board_api_internal_db_model_Permission:
     properties:
       code:
         type: integer
       data:
-        $ref: '#/definitions/VEDA95_open_board_api_internal_auth.User'
+        $ref: '#/definitions/VEDA95_open_board_api_internal_db_model.Permission'
       message:
         type: string
+    type: object
+  VEDA95_open_board_api_internal_http_responses.SuccessResponse-VEDA95_open_board_api_internal_db_model_Role:
+    properties:
+      code:
+        type: integer
+      data:
+        $ref: '#/definitions/VEDA95_open_board_api_internal_db_model.Role'
+      message:
+        type: string
+    type: object
+  VEDA95_open_board_api_internal_http_responses.SuccessResponse-VEDA95_open_board_api_internal_db_model_User:
+    properties:
+      code:
+        type: integer
+      data:
+        $ref: '#/definitions/VEDA95_open_board_api_internal_db_model.User'
+      message:
+        type: string
+    type: object
+  VEDA95_open_board_api_internal_http_responses.SuccessResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage:
+    properties:
+      code:
+        type: integer
+      data:
+        $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.GenericMessage'
+      message:
+        type: string
+    type: object
+  VEDA95_open_board_api_internal_http_responses.SuccessResponse-fiber_Map:
+    properties:
+      code:
+        type: integer
+      data:
+        $ref: '#/definitions/fiber.Map'
+      message:
+        type: string
+    type: object
+  VEDA95_open_board_api_internal_http_validators.CreateExternalProviderValidator:
+    properties:
+      auth_url:
+        type: string
+      client_id:
+        minLength: 1
+        type: string
+      client_secret:
+        minLength: 1
+        type: string
+      default_login_method:
+        default: false
+        type: boolean
+      login_url:
+        type: string
+      logout_url:
+        type: string
+      name:
+        maxLength: 255
+        minLength: 1
+        type: string
+      permission_ids:
+        items:
+          type: string
+        type: array
+      required_email_domain:
+        maxLength: 255
+        minLength: 1
+        type: string
+      self_registration_enabled:
+        default: false
+        type: boolean
+      use_pkce:
+        default: false
+        type: boolean
+      userinfo_url:
+        type: string
+    required:
+    - auth_url
+    - client_id
+    - client_secret
+    - login_url
+    - name
+    - userinfo_url
     type: object
   VEDA95_open_board_api_internal_http_validators.CreatePermissionValidator:
     properties:
@@ -234,7 +440,7 @@ definitions:
     type: object
   VEDA95_open_board_api_internal_http_validators.CreateUserValidator:
     properties:
-      email_address:
+      email:
         type: string
       first_name:
         minLength: 1
@@ -255,7 +461,7 @@ definitions:
         minLength: 1
         type: string
     required:
-    - email_address
+    - email
     - password
     - username
     type: object
@@ -307,6 +513,27 @@ definitions:
     required:
     - type
     type: object
+  VEDA95_open_board_api_internal_http_validators.OAuthTokenExchangeValidator:
+    properties:
+      code:
+        minLength: 1
+        type: string
+      redirect_url:
+        type: string
+      state:
+        minLength: 1
+        type: string
+      type:
+        enum:
+        - token
+        - session
+        type: string
+    required:
+    - code
+    - redirect_url
+    - state
+    - type
+    type: object
   VEDA95_open_board_api_internal_http_validators.ReturnValidator:
     properties:
       type:
@@ -316,6 +543,80 @@ definitions:
         type: string
     required:
     - type
+    type: object
+  VEDA95_open_board_api_internal_http_validators.SetupEmailTOTPValidator:
+    properties:
+      name:
+        maxLength: 255
+        minLength: 1
+        type: string
+    required:
+    - name
+    type: object
+  VEDA95_open_board_api_internal_http_validators.SetupWebAuthnValidator:
+    properties:
+      aaguid:
+        type: string
+      attachment:
+        enum:
+        - platform
+        - cross-platform
+        type: string
+      attestation_type:
+        enum:
+        - none
+        - indirect
+        - direct
+        - enterprise
+        type: string
+      credential_id:
+        minLength: 1
+        type: string
+      name:
+        maxLength: 255
+        minLength: 1
+        type: string
+      public_key:
+        minLength: 1
+        type: string
+    required:
+    - attestation_type
+    - credential_id
+    - name
+    - public_key
+    type: object
+  VEDA95_open_board_api_internal_http_validators.UpdateExternalProviderValidator:
+    properties:
+      auth_url:
+        type: string
+      client_id:
+        minLength: 1
+        type: string
+      client_secret:
+        minLength: 1
+        type: string
+      default_login_method:
+        type: boolean
+      login_url:
+        type: string
+      logout_url:
+        type: string
+      name:
+        maxLength: 255
+        minLength: 1
+        type: string
+      permission_ids:
+        items:
+          type: string
+        type: array
+      required_email_domain:
+        type: string
+      self_registration_enabled:
+        type: boolean
+      use_pkce:
+        type: boolean
+      userinfo_url:
+        type: string
     type: object
   VEDA95_open_board_api_internal_http_validators.UpdatePermissionValidator:
     properties:
@@ -337,7 +638,7 @@ definitions:
     type: object
   VEDA95_open_board_api_internal_http_validators.UpdateUserValidator:
     properties:
-      email_address:
+      email:
         type: string
       first_name:
         minLength: 1
@@ -352,6 +653,38 @@ definitions:
       username:
         minLength: 1
         type: string
+    type: object
+  VEDA95_open_board_api_internal_http_validators.VerifyEmailTOTPValidator:
+    properties:
+      code:
+        type: string
+    required:
+    - code
+    type: object
+  VEDA95_open_board_api_internal_http_validators.VerifyWebAuthnValidator:
+    properties:
+      authenticator_data:
+        minLength: 1
+        type: string
+      client_data_json:
+        minLength: 1
+        type: string
+      credential_id:
+        minLength: 1
+        type: string
+      sign_count:
+        type: integer
+      signature:
+        minLength: 1
+        type: string
+    required:
+    - authenticator_data
+    - client_data_json
+    - credential_id
+    - signature
+    type: object
+  fiber.Map:
+    additionalProperties: true
     type: object
 info:
   contact: {}
@@ -368,7 +701,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.OkCollectionResponse-VEDA95_open_board_api_internal_auth_Permission'
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.OkCollectionResponse-VEDA95_open_board_api_internal_db_model_Permission'
         "500":
           description: Internal Server Error
           schema:
@@ -392,7 +725,7 @@ paths:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.SuccessResponse-VEDA95_open_board_api_internal_auth_Permission'
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.SuccessResponse-VEDA95_open_board_api_internal_db_model_Permission'
         "422":
           description: Unprocessable Entity
           schema:
@@ -449,7 +782,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.OkResponse-VEDA95_open_board_api_internal_auth_Permission'
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.OkResponse-VEDA95_open_board_api_internal_db_model_Permission'
         "404":
           description: Not Found
           schema:
@@ -486,7 +819,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.SuccessResponse-VEDA95_open_board_api_internal_auth_Permission'
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.SuccessResponse-VEDA95_open_board_api_internal_db_model_Permission'
         "404":
           description: Not Found
           schema:
@@ -511,7 +844,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.OkCollectionResponse-VEDA95_open_board_api_internal_auth_Role'
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.OkCollectionResponse-VEDA95_open_board_api_internal_db_model_Role'
         "500":
           description: Internal Server Error
           schema:
@@ -535,7 +868,7 @@ paths:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.SuccessResponse-VEDA95_open_board_api_internal_auth_Role'
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.SuccessResponse-VEDA95_open_board_api_internal_db_model_Role'
         "422":
           description: Unprocessable Entity
           schema:
@@ -594,7 +927,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.OkResponse-VEDA95_open_board_api_internal_auth_Role'
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.OkResponse-VEDA95_open_board_api_internal_db_model_Role'
         "404":
           description: Not Found
           schema:
@@ -631,7 +964,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.SuccessResponse-VEDA95_open_board_api_internal_auth_Role'
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.SuccessResponse-VEDA95_open_board_api_internal_db_model_Role'
         "404":
           description: Not Found
           schema:
@@ -656,7 +989,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.OkCollectionResponse-VEDA95_open_board_api_internal_auth_User'
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.OkCollectionResponse-VEDA95_open_board_api_internal_db_model_User'
         "500":
           description: Internal Server Error
           schema:
@@ -680,7 +1013,7 @@ paths:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.SuccessResponse-VEDA95_open_board_api_internal_auth_User'
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.SuccessResponse-VEDA95_open_board_api_internal_db_model_User'
         "422":
           description: Unprocessable Entity
           schema:
@@ -707,7 +1040,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.OkCollectionResponse-VEDA95_open_board_api_internal_auth_User'
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.OkCollectionResponse-VEDA95_open_board_api_internal_db_model_User'
         "404":
           description: Not Found
           schema:
@@ -737,7 +1070,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.OkResponse-VEDA95_open_board_api_internal_auth_User'
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.OkResponse-VEDA95_open_board_api_internal_db_model_User'
         "404":
           description: Not Found
           schema:
@@ -767,14 +1100,14 @@ paths:
         in: body
         name: request
         schema:
-          $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.SuccessResponse-VEDA95_open_board_api_internal_auth_User'
+          $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.SuccessResponse-VEDA95_open_board_api_internal_db_model_User'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.OkCollectionResponse-VEDA95_open_board_api_internal_auth_User'
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.OkCollectionResponse-VEDA95_open_board_api_internal_db_model_User'
         "404":
           description: Not Found
           schema:
@@ -790,6 +1123,116 @@ paths:
       summary: Update user
       tags:
       - users
+  /auth/email/verify/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Verifies the user's email using the token
+      parameters:
+      - description: Verification token ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.OkResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+      summary: Verify email
+      tags:
+      - email-verification
+  /auth/email/verify/resend:
+    post:
+      consumes:
+      - application/json
+      description: Resends the verification email to the authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.OkResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+      summary: Resend verification email
+      tags:
+      - email-verification
+  /auth/email/verify/send:
+    post:
+      consumes:
+      - application/json
+      description: Sends a verification email to the authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.OkResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+      summary: Send verification email
+      tags:
+      - email-verification
+  /auth/email/verify/status:
+    get:
+      consumes:
+      - application/json
+      description: Returns the email verification status
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.OkResponse-fiber_Map'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+      summary: Get verification status
+      tags:
+      - email-verification
   /auth/login:
     post:
       consumes:
@@ -921,7 +1364,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.OkResponse-VEDA95_open_board_api_internal_auth_User'
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.OkResponse-VEDA95_open_board_api_internal_db_model_User'
         "401":
           description: Unauthorized
           schema:
@@ -950,7 +1393,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.SuccessResponse-VEDA95_open_board_api_internal_auth_User'
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.SuccessResponse-VEDA95_open_board_api_internal_db_model_User'
         "401":
           description: Unauthorized
           schema:
@@ -976,7 +1419,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.OkCollectionResponse-VEDA95_open_board_api_internal_auth_UserSessionReadOnly'
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.OkCollectionResponse-VEDA95_open_board_api_internal_db_model_Session'
         "401":
           description: Unauthorized
           schema:
@@ -988,6 +1431,566 @@ paths:
       summary: List sessions
       tags:
       - authentication
+  /auth/mfa/email-totp/send:
+    post:
+      consumes:
+      - application/json
+      description: Sends a TOTP code to the user's email
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.SuccessResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+      summary: Send email TOTP code
+      tags:
+      - mfa
+  /auth/mfa/email-totp/setup:
+    post:
+      consumes:
+      - application/json
+      description: Sets up email-based TOTP for the authenticated user
+      parameters:
+      - description: Request Data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/VEDA95_open_board_api_internal_http_validators.SetupEmailTOTPValidator'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.SuccessResponse-VEDA95_open_board_api_internal_db_model_MultiAuthMethod'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+      summary: Setup email TOTP
+      tags:
+      - mfa
+  /auth/mfa/email-totp/verify:
+    post:
+      consumes:
+      - application/json
+      description: Verifies the TOTP code sent via email
+      parameters:
+      - description: Request Data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/VEDA95_open_board_api_internal_http_validators.VerifyEmailTOTPValidator'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.SuccessResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+      summary: Verify email TOTP code
+      tags:
+      - mfa
+  /auth/mfa/methods:
+    get:
+      consumes:
+      - application/json
+      description: Returns all MFA methods for the authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.OkCollectionResponse-VEDA95_open_board_api_internal_db_model_MultiAuthMethod'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+      summary: Get MFA methods
+      tags:
+      - mfa
+  /auth/mfa/methods/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes an MFA method for the authenticated user
+      parameters:
+      - description: MFA Method ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.OkResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+      summary: Delete MFA method
+      tags:
+      - mfa
+  /auth/mfa/status:
+    get:
+      consumes:
+      - application/json
+      description: Returns whether MFA is enabled/required for the user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.OkResponse-fiber_Map'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+      summary: Get MFA status
+      tags:
+      - mfa
+  /auth/mfa/webauthn/authenticate:
+    post:
+      consumes:
+      - application/json
+      description: Verifies a WebAuthn authentication assertion
+      parameters:
+      - description: Request Data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/VEDA95_open_board_api_internal_http_validators.VerifyWebAuthnValidator'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.SuccessResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+      summary: Verify WebAuthn
+      tags:
+      - mfa
+  /auth/mfa/webauthn/authenticate/options:
+    get:
+      consumes:
+      - application/json
+      description: Returns options for WebAuthn authentication ceremony
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.SuccessResponse-fiber_Map'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+      summary: Get WebAuthn authentication options
+      tags:
+      - mfa
+  /auth/mfa/webauthn/credentials:
+    get:
+      consumes:
+      - application/json
+      description: Returns all WebAuthn credentials for the authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.SuccessCollectionResponse-VEDA95_open_board_api_internal_db_model_MultiAuthMethod'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+      summary: Get WebAuthn credentials
+      tags:
+      - mfa
+  /auth/mfa/webauthn/register:
+    post:
+      consumes:
+      - application/json
+      description: Completes WebAuthn registration with credential
+      parameters:
+      - description: Request Data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/VEDA95_open_board_api_internal_http_validators.SetupWebAuthnValidator'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.SuccessResponse-VEDA95_open_board_api_internal_db_model_MultiAuthMethod'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+      summary: Setup WebAuthn
+      tags:
+      - mfa
+  /auth/mfa/webauthn/register/options:
+    get:
+      consumes:
+      - application/json
+      description: Returns options for WebAuthn registration ceremony
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.SuccessResponse-fiber_Map'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+      summary: Get WebAuthn registration options
+      tags:
+      - mfa
+  /auth/oauth/authorize/{id}:
+    get:
+      description: Initiates the OAuth authorization flow
+      parameters:
+      - description: Provider ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Redirect URL after OAuth
+        in: query
+        name: redirect_url
+        required: true
+        type: string
+      responses:
+        "302":
+          description: Redirect to OAuth provider
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+      summary: Start OAuth flow
+      tags:
+      - oauth
+  /auth/oauth/callback/{id}:
+    post:
+      consumes:
+      - application/json
+      description: Exchanges OAuth authorization code for tokens and creates a session
+      parameters:
+      - description: Provider ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Request Data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/VEDA95_open_board_api_internal_http_validators.OAuthTokenExchangeValidator'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.SuccessResponse-VEDA95_open_board_api_internal_auth_LocalUserLogin'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+      summary: OAuth token exchange
+      tags:
+      - oauth
+  /auth/oauth/providers:
+    get:
+      consumes:
+      - application/json
+      description: Returns all external auth providers
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.OkCollectionResponse-VEDA95_open_board_api_internal_db_model_ExternalAuthProvider'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+      summary: Get all providers
+      tags:
+      - oauth
+    post:
+      consumes:
+      - application/json
+      description: Creates a new external auth provider
+      parameters:
+      - description: Request Data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/VEDA95_open_board_api_internal_http_validators.CreateExternalProviderValidator'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.SuccessResponse-VEDA95_open_board_api_internal_db_model_ExternalAuthProvider'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+      summary: Create provider
+      tags:
+      - oauth
+  /auth/oauth/providers/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes an external auth provider
+      parameters:
+      - description: Provider ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.SuccessResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+      summary: Delete provider
+      tags:
+      - oauth
+    get:
+      consumes:
+      - application/json
+      description: Returns an external auth provider by ID
+      parameters:
+      - description: Provider ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.OkResponse-VEDA95_open_board_api_internal_db_model_ExternalAuthProvider'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+      summary: Get provider by ID
+      tags:
+      - oauth
+    patch:
+      consumes:
+      - application/json
+      description: Updates an external auth provider
+      parameters:
+      - description: Provider ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Request Data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/VEDA95_open_board_api_internal_http_validators.UpdateExternalProviderValidator'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.SuccessResponse-VEDA95_open_board_api_internal_db_model_ExternalAuthProvider'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+      summary: Update provider
+      tags:
+      - oauth
+  /auth/oauth/providers/enabled:
+    get:
+      consumes:
+      - application/json
+      description: Returns all enabled external auth providers (for login page)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.OkCollectionResponse-VEDA95_open_board_api_internal_db_model_ExternalAuthProvider'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/VEDA95_open_board_api_internal_http_responses.ErrorResponse-VEDA95_open_board_api_internal_http_responses_GenericMessage'
+      summary: Get enabled providers
+      tags:
+      - oauth
   /auth/refresh:
     post:
       consumes:
