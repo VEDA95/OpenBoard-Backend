@@ -5,12 +5,12 @@ type ErrorMessageResponse struct {
 	Error GenericMessage `json:"error"`
 }
 
-type ErrorResponse[T interface{}] struct {
+type ErrorResponse[T any] struct {
 	BaseResponse
 	Errors T `json:"errors"`
 }
 
-type ErrorCollectionResponse[T interface{}] struct {
+type ErrorCollectionResponse[T any] struct {
 	BaseCollectionResponse
 	Errors []T `json:"errors"`
 }
@@ -24,14 +24,14 @@ func ErrorRespMessage(code int, message string) *ErrorMessageResponse {
 	}
 }
 
-func ErrorResp[T interface{}](code int, data T) *ErrorResponse[T] {
+func ErrorResp[T any](code int, data T) *ErrorResponse[T] {
 	return &ErrorResponse[T]{
 		BaseResponse: BaseResponse{Code: code},
 		Errors:       data,
 	}
 }
 
-func ErrorCollectionResp[T interface{}](code int, errors []T) *ErrorCollectionResponse[T] {
+func ErrorCollectionResp[T any](code int, errors []T) *ErrorCollectionResponse[T] {
 	return &ErrorCollectionResponse[T]{
 		BaseCollectionResponse: BaseCollectionResponse{
 			BaseResponse: BaseResponse{

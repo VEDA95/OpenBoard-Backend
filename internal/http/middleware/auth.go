@@ -1,10 +1,11 @@
 package middleware
 
 import (
+	"VEDA95/open_board/api/internal/log"
+	"VEDA95/open_board/api/internal/service"
 	"strings"
 
 	models "VEDA95/open_board/api/internal/db/model"
-	"VEDA95/open_board/api/internal/service"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -31,7 +32,8 @@ func (authMiddleware *AuthMiddleware) RequireAuthentication() fiber.Handler {
 				token = authSplit[1]
 			}
 		} else {
-			token = context.Cookies("open_board_auth_session", "")
+			token = context.Cookies("open_board_session", "")
+			log.Global.Debug().Str("cookie", token).Msg("cookie token")
 		}
 
 		if len(token) == 0 {
@@ -46,11 +48,11 @@ func (authMiddleware *AuthMiddleware) RequireAuthentication() fiber.Handler {
 
 			if isInvalidCredentials && isCookie {
 				context.ClearCookie("open_board_session_remember_me")
-				context.ClearCookie("open_board_auth_session")
+				context.ClearCookie("open_board_session")
 			}
 
 			if isRefreshRequired && isCookie {
-				context.ClearCookie("open_board_auth_session")
+				context.ClearCookie("open_board_session")
 			}
 
 			if isInvalidCredentials || isRefreshRequired {

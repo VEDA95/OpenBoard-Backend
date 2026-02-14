@@ -1,21 +1,26 @@
 package responses
 
-type OkResponse[T interface{}] struct {
+type OkResponse[T any] struct {
 	BaseResponse
 	Data T `json:"data"`
 }
 
-type OkCollectionResponse[T interface{}] struct {
+type OkCollectionResponse[T any] struct {
 	BaseCollectionResponse
 	Data []T `json:"data"`
 }
 
-type SuccessResponse[T interface{}] struct {
+type SuccessResponse[T any] struct {
 	OkResponse[T]
 	GenericMessage
 }
 
-func OKResponse[T interface{}](code int, data T) *OkResponse[T] {
+type SuccessCollectionResponse[T any] struct {
+	OkCollectionResponse[T]
+	GenericMessage
+}
+
+func OKResponse[T any](code int, data T) *OkResponse[T] {
 	return &OkResponse[T]{
 		BaseResponse: BaseResponse{
 			Code: code,
@@ -24,7 +29,7 @@ func OKResponse[T interface{}](code int, data T) *OkResponse[T] {
 	}
 }
 
-func OKCollectionResponse[T interface{}](code int, data []T) *OkCollectionResponse[T] {
+func OKCollectionResponse[T any](code int, data []T) *OkCollectionResponse[T] {
 	return &OkCollectionResponse[T]{
 		BaseCollectionResponse: BaseCollectionResponse{
 			BaseResponse: BaseResponse{
@@ -36,12 +41,25 @@ func OKCollectionResponse[T interface{}](code int, data []T) *OkCollectionRespon
 	}
 }
 
-func CreateSuccessResponse[T interface{}](code int, message string, data T) *SuccessResponse[T] {
+func CreateSuccessResponse[T any](code int, message string, data T) *SuccessResponse[T] {
 	return &SuccessResponse[T]{
 		GenericMessage: GenericMessage{Message: message},
 		OkResponse: OkResponse[T]{
 			BaseResponse: BaseResponse{Code: code},
 			Data:         data,
+		},
+	}
+}
+
+func CreateSuccessCollectionResponse[T any](code int, message string, data []T) *SuccessCollectionResponse[T] {
+	return &SuccessCollectionResponse[T]{
+		GenericMessage: GenericMessage{Message: message},
+		OkCollectionResponse: OkCollectionResponse[T]{
+			BaseCollectionResponse: BaseCollectionResponse{
+				BaseResponse: BaseResponse{Code: code},
+				Count:        len(data),
+			},
+			Data: data,
 		},
 	}
 }
