@@ -9,30 +9,48 @@ import (
 	"VEDA95/open_board/api/internal/log"
 	"VEDA95/open_board/api/internal/service"
 	"fmt"
+	"net/url"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
 )
 
 type AuthHandler struct {
-	authService  *service.AuthService
-	userService  *service.UserService
-	emailService *service.EmailService
-	validator    *validators.Validator
+	authService     *service.AuthService
+	userService     *service.UserService
+	emailService    *service.EmailService
+	settingsService *service.SettingsService
+	validator       *validators.Validator
 }
 
 func NewAuthHandler(
 	authService *service.AuthService,
 	userService *service.UserService,
 	emailService *service.EmailService,
+	settingsService *service.SettingsService,
 	validator *validators.Validator,
 ) *AuthHandler {
 	return &AuthHandler{
-		authService:  authService,
-		userService:  userService,
-		emailService: emailService,
-		validator:    validator,
+		authService:     authService,
+		userService:     userService,
+		emailService:    emailService,
+		settingsService: settingsService,
+		validator:       validator,
 	}
+}
+
+func (authHandler *AuthHandler) getCookieDomain() string {
+	authSettings, err := authHandler.settingsService.GetAuthSettings()
+
+	if err != nil || len(authSettings.CORSDomain) == 0 {
+		return "localhost"
+	}
+	// Extract domain from the CORS URL
+	parsedURL, err := url.Parse(authSettings.CORSDomain)
+	if err != nil {
+		return "localhost"
+	}
+	return parsedURL.Hostname()
 }
 
 // LocalLogin godoc
@@ -72,7 +90,7 @@ func (authHandler *AuthHandler) LocalLogin(context *fiber.Ctx) error {
 			HTTPOnly: true,
 			Secure:   false,
 			Path:     "/",
-			Domain:   "localhost",
+			Domain:   authHandler.getCookieDomain(),
 		})
 
 		if dataValidator.Remember {
@@ -83,7 +101,7 @@ func (authHandler *AuthHandler) LocalLogin(context *fiber.Ctx) error {
 				HTTPOnly: true,
 				Secure:   false,
 				Path:     "/",
-				Domain:   "localhost",
+				Domain:   authHandler.getCookieDomain(),
 			})
 		}
 
@@ -279,7 +297,7 @@ func (authHandler *AuthHandler) LocalRefresh(context *fiber.Ctx) error {
 			HTTPOnly: true,
 			Secure:   false,
 			Path:     "/",
-			Domain:   "localhost",
+			Domain:   authHandler.getCookieDomain(),
 		})
 		context.Cookie(&fiber.Cookie{
 			Name:     "open_board_session_remember_me",
@@ -288,7 +306,7 @@ func (authHandler *AuthHandler) LocalRefresh(context *fiber.Ctx) error {
 			HTTPOnly: true,
 			Secure:   false,
 			Path:     "/",
-			Domain:   "localhost",
+			Domain:   authHandler.getCookieDomain(),
 		})
 
 		return nil

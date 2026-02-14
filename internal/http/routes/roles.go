@@ -1,6 +1,7 @@
 package routes
 
 import (
+	models "VEDA95/open_board/api/internal/db/model"
 	"VEDA95/open_board/api/internal/errors"
 	"VEDA95/open_board/api/internal/http/responses"
 	"VEDA95/open_board/api/internal/http/validators"
@@ -9,6 +10,8 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 )
+
+var _ = models.Role{}
 
 type RoleHandler struct {
 	service   *service.RoleService
@@ -27,7 +30,7 @@ func NewRoleHandler(roleService *service.RoleService, validator *validators.Vali
 //	@Description	Get all roles
 //	@Summary 		List roles
 //	@Tags 			authorization
-//	@Success		200	{object} responses.OkCollectionResponse[auth.Role]
+//	@Success		200	{object} responses.OkCollectionResponse[models.Role]
 //	@Failure		500 {object} responses.ErrorResponse[responses.GenericMessage]
 //	@Router			/api/roles [get]
 //	@Produce		json
@@ -46,7 +49,7 @@ func (roleHandler *RoleHandler) GET(context *fiber.Ctx) error {
 //		@Summary 		Create role
 //		@Tags 			authorization
 //		@param			request body validators.CreateRoleValidator false "Request Data"
-//	 	@Success		201	{object} responses.SuccessResponse[auth.Role]
+//	 	@Success		201	{object} responses.SuccessResponse[models.Role]
 //		@Failure		422 {object} responses.ErrorResponse[validators.ErrorResponseMap]
 //		@Failure		500 {object} responses.ErrorResponse[responses.GenericMessage]
 //		@Router			/api/roles [post]
@@ -85,7 +88,7 @@ func (roleHandler *RoleHandler) POST(context *fiber.Ctx) error {
 //	@Summary 		List role
 //	@Tags 			authorization
 //	@Param			id path string true "Role ID"
-//	@Success		200	{object} responses.OkResponse[auth.Role]
+//	@Success		200	{object} responses.OkResponse[models.Role]
 //	@Failure		422 {object} responses.ErrorResponse[validators.ErrorResponseMap]
 //	@Failure		404,500 {object} responses.ErrorResponse[responses.GenericMessage]
 //	@Router			/api/roles/{id} [get]
@@ -120,7 +123,7 @@ func (roleHandler *RoleHandler) GETByID(context *fiber.Ctx) error {
 //	@Tags 			authorization
 //	@Param			id path string true "Role ID"
 //	@Param			request body validators.UpdateRoleValidator false "Request Data"
-//	@Success		200	{object} responses.SuccessResponse[auth.Role]
+//	@Success		200	{object} responses.SuccessResponse[models.Role]
 //	@Failure		422 {object} responses.ErrorResponse[validators.ErrorResponseMap]
 //	@Failure		404,500 {object} responses.ErrorResponse[responses.GenericMessage]
 //	@Router			/api/roles/{id} [patch]

@@ -1,6 +1,7 @@
 package routes
 
 import (
+	models "VEDA95/open_board/api/internal/db/model"
 	"VEDA95/open_board/api/internal/errors"
 	"VEDA95/open_board/api/internal/http/responses"
 	"VEDA95/open_board/api/internal/http/validators"
@@ -9,6 +10,8 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 )
+
+var _ = models.User{}
 
 type UserHandler struct {
 	service           *service.UserService
@@ -29,7 +32,7 @@ func NewUserHandler(userService *service.UserService, fileUploadService *service
 //	@Description 	List all users
 //	@Summary 		List users
 //	@Tags			users
-//	@Success		200 {object} responses.OkCollectionResponse[auth.User]
+//	@Success		200 {object} responses.OkCollectionResponse[models.User]
 //	@Failure		500 {object} responses.ErrorResponse[responses.GenericMessage]
 //	@Router			/api/users [get]
 //	@Produce		json
@@ -48,7 +51,7 @@ func (userHandler *UserHandler) GET(context *fiber.Ctx) error {
 //	@Summary 		Create user
 //	@Tags			users
 //	@Param			request body validators.CreateUserValidator false "request data"
-//	@Success		201 {object} responses.SuccessResponse[auth.User]
+//	@Success		201 {object} responses.SuccessResponse[models.User]
 //	@Failure		422 {object} responses.ErrorResponse[validators.ErrorResponseMap]
 //	@Failure		500 {object} responses.ErrorResponse[responses.GenericMessage]
 //	@Router			/api/users [post]
@@ -121,7 +124,7 @@ func (userHandler *UserHandler) POSTThumbnail(context *fiber.Ctx) error {
 //	@Summary 		List user
 //	@Tags			users
 //	@Param			id path string true "user ID"
-//	@Success		200 {object} responses.OkResponse[auth.User]
+//	@Success		200 {object} responses.OkResponse[models.User]
 //	@Failure		422 {object} responses.ErrorResponse[validators.ErrorResponseMap]
 //	@Failure		404,500 {object} responses.ErrorResponse[responses.GenericMessage]
 //	@Router			/api/users/{id} [get]
@@ -155,8 +158,8 @@ func (userHandler *UserHandler) GETByID(context *fiber.Ctx) error {
 //	@Summary 		Update user
 //	@Tags			users
 //	@Param			id path string true "user ID"
-//	@Param			request body responses.SuccessResponse[auth.User] false "request data"
-//	@Success		200 {object} responses.OkCollectionResponse[auth.User]
+//	@Param			request body responses.SuccessResponse[models.User] false "request data"
+//	@Success		200 {object} responses.OkCollectionResponse[models.User]
 //	@Failure		422 {object} responses.ErrorResponse[validators.ErrorResponseMap]
 //	@Failure		404,500 {object} responses.ErrorResponse[responses.GenericMessage]
 //	@Router			/api/users/{id} [patch]
@@ -213,7 +216,7 @@ func (userHandler *UserHandler) PATCH(context *fiber.Ctx) error {
 //	@Summary 		Delete user
 //	@Tags			users
 //	@Param			id path string true "user ID"
-//	@Success		200 {object} responses.OkCollectionResponse[auth.User]
+//	@Success		200 {object} responses.OkCollectionResponse[models.User]
 //	@Failure		422 {object} responses.ErrorResponse[validators.ErrorResponseMap]
 //	@Failure		404,500 {object} responses.ErrorResponse[responses.GenericMessage]
 //	@Router			/api/users/{id} [delete]

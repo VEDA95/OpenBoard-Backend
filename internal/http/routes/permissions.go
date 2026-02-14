@@ -1,6 +1,7 @@
 package routes
 
 import (
+	models "VEDA95/open_board/api/internal/db/model"
 	"VEDA95/open_board/api/internal/errors"
 	"VEDA95/open_board/api/internal/http/responses"
 	"VEDA95/open_board/api/internal/http/validators"
@@ -9,6 +10,8 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 )
+
+var _ = models.Permission{}
 
 type PermissionHandler struct {
 	service   *service.PermissionService
