@@ -1,7 +1,5 @@
 package validators
 
-// Email TOTP validators
-
 type SetupEmailTOTPValidator struct {
 	Name string `json:"name" validate:"required,min=1,max=255"`
 }
@@ -9,8 +7,6 @@ type SetupEmailTOTPValidator struct {
 type VerifyEmailTOTPValidator struct {
 	Code string `json:"code" validate:"required,len=6,numeric"`
 }
-
-// WebAuthn validators
 
 type SetupWebAuthnValidator struct {
 	Name            string `json:"name" validate:"required,min=1,max=255"`
@@ -30,17 +26,16 @@ type VerifyWebAuthnValidator struct {
 }
 
 type WebAuthnRegistrationOptionsValidator struct {
-	AttestationType      string `json:"attestation_type,omitempty" validate:"omitempty,oneof=none indirect direct enterprise"`
-	AuthenticatorType    string `json:"authenticator_type,omitempty" validate:"omitempty,oneof=platform cross-platform"`
-	ResidentKeyRequired  bool   `json:"resident_key_required,omitempty" validate:"omitempty"`
-	UserVerification     string `json:"user_verification,omitempty" validate:"omitempty,oneof=required preferred discouraged"`
+	AttestationType     string `json:"attestation_type,omitempty" validate:"omitempty,oneof=none indirect direct enterprise"`
+	AuthenticatorType   string `json:"authenticator_type,omitempty" validate:"omitempty,oneof=platform cross-platform"`
+	ResidentKeyRequired bool   `json:"resident_key_required,omitempty" validate:"omitempty"`
+	UserVerification    string `json:"user_verification,omitempty" validate:"omitempty,oneof=required preferred discouraged"`
 }
 
 type WebAuthnAuthenticationOptionsValidator struct {
 	UserVerification string `json:"user_verification,omitempty" validate:"omitempty,oneof=required preferred discouraged"`
 }
 
-// Delete MFA method validator
 type DeleteMFAMethodValidator struct {
 	MethodID string `json:"method_id" validate:"required,uuid"`
 }

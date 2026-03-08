@@ -1,6 +1,8 @@
 package service
 
 import (
+	"VEDA95/open_board/api/internal/db/repository"
+	"VEDA95/open_board/api/internal/http/validators"
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
@@ -9,30 +11,24 @@ import (
 	"time"
 
 	models "VEDA95/open_board/api/internal/db/model"
-	"VEDA95/open_board/api/internal/db/repository"
-	"VEDA95/open_board/api/internal/http/validators"
 
+	"github.com/pquerna/otp/totp"
 	"gorm.io/datatypes"
 )
 
 const (
-	// MFA method types
 	MFATypeEmailTOTP = "email_totp"
 	MFATypeWebAuthn  = "webauthn"
-
-	// TOTP configuration
-	TOTPCodeLength  = 6
-	TOTPValidityMin = 10 // minutes
+	TOTPCodeLength   = 6
+	TOTPValidityMin  = 10
 )
 
-// TOTPCredentials stores TOTP-related data
 type TOTPCredentials struct {
 	LastCodeSent time.Time `json:"last_code_sent"`
 	CodeHash     string    `json:"code_hash,omitempty"`
 	CodeExpiry   time.Time `json:"code_expiry,omitempty"`
 }
 
-// WebAuthnCredentials stores WebAuthn credential data
 type WebAuthnCredentials struct {
 	CredentialID     string `json:"credential_id"`
 	PublicKey        string `json:"public_key"`
@@ -55,10 +51,9 @@ type PendingTOTPChallenge struct {
 }
 
 type MultiAuthService struct {
-	multiAuthRepo    *repository.MultiAuthMethodRepository
-	userRepo         *repository.UserRepository
-	authSettingsRepo *repository.AuthSettingsRepository
-	// In-memory store for pending TOTP challenges (in production, use Redis or similar)
+	multiAuthRepo     *repository.MultiAuthMethodRepository
+	userRepo          *repository.UserRepository
+	authSettingsRepo  *repository.AuthSettingsRepository
 	pendingChallenges map[string]*PendingTOTPChallenge
 }
 
@@ -75,24 +70,20 @@ func NewMultiAuthService(
 	}
 }
 
-// GetUserMFAMethods returns all MFA methods for a user
 func (s *MultiAuthService) GetUserMFAMethods(userID string) ([]*models.MultiAuthMethod, error) {
 	return s.multiAuthRepo.FindByUserID(userID, repository.QueryOptions{
 		Omit: []string{"Credentials"},
 	})
 }
 
-// GetMFAMethodByID returns an MFA method by ID
 func (s *MultiAuthService) GetMFAMethodByID(ID string) (*models.MultiAuthMethod, error) {
 	return s.multiAuthRepo.FindByID(ID, repository.QueryOptions{})
 }
 
-// HasMFAEnabled checks if a user has any MFA method enabled
 func (s *MultiAuthService) HasMFAEnabled(userID string) bool {
 	return s.multiAuthRepo.CountByUserID(userID) > 0
 }
 
-// IsMFARequired checks if MFA is required based on settings
 func (s *MultiAuthService) IsMFARequired() (bool, error) {
 	authSettings, err := s.authSettingsRepo.Find()
 	if err != nil {
@@ -150,7 +141,6 @@ func (s *MultiAuthService) GenerateEmailTOTPCode(userID string) (*PendingTOTPCha
 		return nil, errors.New("email TOTP is not set up for this user")
 	}
 
-	// Get user email
 	user, err := s.userRepo.FindByID(userID, repository.QueryOptions{
 		Select: []string{"id", "email"},
 	})
@@ -159,14 +149,26 @@ func (s *MultiAuthService) GenerateEmailTOTPCode(userID string) (*PendingTOTPCha
 	}
 
 	// Generate random 6-digit code
-	code, err := generateTOTPCode(TOTPCodeLength)
+	now := time.Now()
+	key, err := totp.Generate(totp.GenerateOpts{
+		Issuer:      "open_board",
+		AccountName: user.Email,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	token, err := totp.GenerateCode(key.Secret(), now)
+	if err != nil {
+		return nil, err
+	}
 	if err != nil {
 		return nil, err
 	}
 
 	// Create challenge
 	challenge := &PendingTOTPChallenge{
-		Code:      code,
+		Code:      token,
 		ExpiresAt: time.Now().Add(time.Duration(TOTPValidityMin) * time.Minute),
 		UserID:    userID,
 		Email:     user.Email,
