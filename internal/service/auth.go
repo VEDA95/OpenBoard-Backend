@@ -1,12 +1,13 @@
 package service
 
 import (
+	"errors"
+	"time"
+
 	"VEDA95/open_board/api/internal/auth"
 	models "VEDA95/open_board/api/internal/db/model"
 	"VEDA95/open_board/api/internal/db/repository"
 	"VEDA95/open_board/api/internal/http/validators"
-	"errors"
-	"time"
 
 	"gorm.io/gorm"
 )
@@ -36,10 +37,7 @@ func NewAuthService(
 }
 
 func (authService *AuthService) GetUserSessions(ID string) ([]*models.Session, error) {
-	sessions, err := authService.sessionRepo.FindByUser(ID, repository.QueryOptions{
-		Preload: []string{"User", "User.Roles", "User.Roles.Permissions"},
-		Omit:    []string{"User.Sessions"},
-	})
+	sessions, err := authService.sessionRepo.FindByUser(ID, repository.WithPreload("User", "User.Roles", "User.Roles.Permissions"), repository.WithOmit("User.Sessions"))
 	if err != nil {
 		return nil, err
 	}
@@ -48,9 +46,7 @@ func (authService *AuthService) GetUserSessions(ID string) ([]*models.Session, e
 }
 
 func (authService *AuthService) ValidateSession(token string) (*models.Session, error) {
-	session, err := authService.sessionRepo.FindByAccessToken(token, repository.QueryOptions{
-		Preload: []string{"User", "User.Roles", "User.Roles.Permissions", "User.Sessions"},
-	})
+	session, err := authService.sessionRepo.FindByAccessToken(token, repository.WithPreload("User", "User.Roles", "User.Roles.Permissions"))
 	if err != nil {
 		return nil, err
 	}
@@ -84,10 +80,7 @@ func (authService *AuthService) LocalLogin(data *validators.LocalLoginValidator,
 		return nil, errors.New("unable to fetch auth settings")
 	}
 
-	user, err := authService.userRepo.FindByUsername(data.Username, repository.QueryOptions{
-		Preload: []string{"Roles", "Roles.Permissions"},
-		Omit:    []string{"Sessions"},
-	})
+	user, err := authService.userRepo.FindByUsername(data.Username, repository.WithPreload("Roles", "Roles.Permissions"), repository.WithOmit("Sessions"))
 	if err != nil {
 		return nil, err
 	}
@@ -124,16 +117,12 @@ func (authService *AuthService) LocalLogin(data *validators.LocalLoginValidator,
 		return nil, err
 	}
 
-	err2 := authService.sessionRepo.Create(session, repository.QueryOptions{
-		Select: columns,
-	})
+	err2 := authService.sessionRepo.Create(session, repository.WithSelect(columns...))
 	if err2 != nil {
 		return nil, err2
 	}
 
-	err3 := authService.userRepo.Update(user, repository.QueryOptions{
-		Select: []string{"last_login"},
-	})
+	err3 := authService.userRepo.Update(user, repository.WithSelect("last_login"))
 	if err3 != nil {
 		return nil, err3
 	}
@@ -155,10 +144,7 @@ func (authService *AuthService) LocalRefresh(token string) (*auth.LoginResponse,
 		return nil, errors.New("unable to fetch auth settings")
 	}
 
-	session, err := authService.sessionRepo.FindByRefreshToken(token, repository.QueryOptions{
-		Preload: []string{"User", "User.Roles", "User.Roles.Permissions"},
-		Omit:    []string{"User.Sessions"},
-	})
+	session, err := authService.sessionRepo.FindByRefreshToken(token, repository.WithPreload("User", "User.Roles", "User.Roles.Permissions"), repository.WithOmit("User.Sessions"))
 	if err != nil {
 		return nil, err
 	}
@@ -187,9 +173,7 @@ func (authService *AuthService) LocalRefresh(token string) (*auth.LoginResponse,
 		return nil, err
 	}
 
-	err2 := authService.sessionRepo.Update(session, repository.QueryOptions{
-		Select: columns,
-	})
+	err2 := authService.sessionRepo.Update(session, repository.WithSelect(columns...))
 	if err2 != nil {
 		return nil, err2
 	}
@@ -200,9 +184,7 @@ func (authService *AuthService) LocalRefresh(token string) (*auth.LoginResponse,
 }
 
 func (authService *AuthService) LocalLogout(token string) error {
-	session, err := authService.sessionRepo.FindByAccessToken(token, repository.QueryOptions{
-		Select: []string{"id"},
-	})
+	session, err := authService.sessionRepo.FindByAccessToken(token, repository.WithSelect("id"))
 	if err != nil {
 		return err
 	}
@@ -219,9 +201,7 @@ func (authService *AuthService) LocalLogoutByUserID(ID string) error {
 }
 
 func (authService *AuthService) IssueForgotPasswordToken(email string) (*models.PasswordResetToken, error) {
-	user, err := authService.userRepo.FindByEmail(email, repository.QueryOptions{
-		Select: []string{"id", "email"},
-	})
+	user, err := authService.userRepo.FindByEmail(email, repository.WithSelect("id", "email"))
 	if err != nil {
 		return nil, err
 	}
@@ -236,9 +216,7 @@ func (authService *AuthService) IssueForgotPasswordToken(email string) (*models.
 		return nil, err
 	}
 
-	err2 := authService.passwordResetRepo.Create(passwordResetToken, repository.QueryOptions{
-		Omit: []string{"User"},
-	})
+	err2 := authService.passwordResetRepo.Create(passwordResetToken, repository.WithOmit("User"))
 	if err2 != nil {
 		return nil, err2
 	}
@@ -263,9 +241,7 @@ func (authService *AuthService) IssueUserPasswordResetToken(user *models.User, d
 		return nil, err
 	}
 
-	err := authService.passwordResetRepo.Create(passwordResetToken, repository.QueryOptions{
-		Omit: []string{"User"},
-	})
+	err := authService.passwordResetRepo.Create(passwordResetToken, repository.WithOmit("User"))
 	if err != nil {
 		return nil, err
 	}
@@ -274,10 +250,7 @@ func (authService *AuthService) IssueUserPasswordResetToken(user *models.User, d
 }
 
 func (authService *AuthService) ResetForgottenPassword(data *validators.ResetPasswordValidator) error {
-	passwordResetToken, err := authService.passwordResetRepo.FindByToken(data.Token, repository.QueryOptions{
-		Preload: []string{"User"},
-		Omit:    []string{"User.Roles", "User.Roles.Permissions", "User.Sessions"},
-	})
+	passwordResetToken, err := authService.passwordResetRepo.FindByToken(data.Token, repository.WithPreload("User"), repository.WithOmit("User.Roles", "User.Roles.Permissions", "User.Sessions"))
 	if err != nil {
 		return err
 	}
@@ -305,15 +278,11 @@ func (authService *AuthService) ResetForgottenPassword(data *validators.ResetPas
 	now := time.Now()
 	passwordResetToken.User.UpdatedAt = &now
 
-	return authService.userRepo.Update(&passwordResetToken.User, repository.QueryOptions{
-		Select: []string{"updated_at", "hashed_password"},
-	})
+	return authService.userRepo.Update(&passwordResetToken.User, repository.WithSelect("updated_at", "hashed_password"))
 }
 
 func (authService *AuthService) ResetUserPassword(user *models.User, data *validators.ResetPasswordValidator) error {
-	passwordResetToken, err := authService.passwordResetRepo.FindByToken(data.Token, repository.QueryOptions{
-		Omit: []string{"User", "User.Roles", "User.Roles.Permissions", "User.Sessions"},
-	})
+	passwordResetToken, err := authService.passwordResetRepo.FindByToken(data.Token, repository.WithOmit("User", "User.Roles", "User.Roles.Permissions", "User.Sessions"))
 	if err != nil {
 		return err
 	}
@@ -341,9 +310,7 @@ func (authService *AuthService) ResetUserPassword(user *models.User, data *valid
 	now := time.Now()
 	user.UpdatedAt = &now
 
-	return authService.userRepo.Update(user, repository.QueryOptions{
-		Select: []string{"updated_at", "hashed_password"},
-	})
+	return authService.userRepo.Update(user, repository.WithSelect("updated_at", "hashed_password"))
 }
 
 func (authService *AuthService) RegisterUser(data *validators.RegisterUserValidator) error {
@@ -364,9 +331,7 @@ func (authService *AuthService) RegisterUser(data *validators.RegisterUserValida
 		return errors.New("user already exists")
 	}
 
-	userRole, err := authService.roleRepo.FindByName(authSettings.DefaultUserRole, repository.QueryOptions{
-		Select: []string{"id"},
-	})
+	userRole, err := authService.roleRepo.FindByName(authSettings.DefaultUserRole, repository.WithSelect("id"))
 	if err != nil {
 		return err
 	}
@@ -391,10 +356,7 @@ func (authService *AuthService) RegisterUser(data *validators.RegisterUserValida
 	return authService.userRepo.CreateWithRoles(
 		user,
 		[]string{userRole.ID},
-		repository.QueryOptions{
-			Preload: []string{"Roles", "Roles.Permissions"},
-			Omit:    []string{"Sessions"},
-		},
-		repository.QueryOptions{},
+		nil,
+		repository.UserFullLoad...,
 	)
 }

@@ -29,9 +29,9 @@ func NewEmailVerificationService(
 // CreateVerificationToken creates a new email verification token for a user
 func (s *EmailVerificationService) CreateVerificationToken(userID string) (*models.EmailVerificationToken, error) {
 	// Check if user exists
-	user, err := s.userRepo.FindByID(userID, repository.QueryOptions{
-		Select: []string{"id", "email", "email_verified"},
-	})
+	user, err := s.userRepo.FindByID(userID,
+		repository.WithSelect("id", "email", "email_verified"),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -49,9 +49,7 @@ func (s *EmailVerificationService) CreateVerificationToken(userID string) (*mode
 		ExpiresOn: time.Now().Add(24 * time.Hour),
 	}
 
-	if err := s.emailVerificationRepo.Create(token, repository.QueryOptions{
-		Preload: []string{"User"},
-	}); err != nil {
+	if err := s.emailVerificationRepo.Create(token, repository.WithPreload("User")); err != nil {
 		return nil, err
 	}
 
@@ -60,9 +58,7 @@ func (s *EmailVerificationService) CreateVerificationToken(userID string) (*mode
 
 // VerifyEmail verifies the user's email using the token
 func (s *EmailVerificationService) VerifyEmail(tokenID string) error {
-	token, err := s.emailVerificationRepo.FindByID(tokenID, repository.QueryOptions{
-		Preload: []string{"User"},
-	})
+	token, err := s.emailVerificationRepo.FindByID(tokenID, repository.WithPreload("User"))
 	if err != nil {
 		return errors.New("invalid or expired verification token")
 	}
@@ -79,9 +75,9 @@ func (s *EmailVerificationService) VerifyEmail(tokenID string) error {
 	now := time.Now()
 	token.User.UpdatedAt = &now
 
-	if err := s.userRepo.Update(&token.User, repository.QueryOptions{
-		Select: []string{"email_verified", "updated_at"},
-	}); err != nil {
+	if err := s.userRepo.Update(&token.User,
+		repository.WithSelect("email_verified", "updated_at"),
+	); err != nil {
 		return err
 	}
 
@@ -96,7 +92,7 @@ func (s *EmailVerificationService) ResendVerificationToken(userID string) (*mode
 
 // GetPendingVerification gets the pending verification token for a user
 func (s *EmailVerificationService) GetPendingVerification(userID string) (*models.EmailVerificationToken, error) {
-	token, err := s.emailVerificationRepo.FindByUserID(userID, repository.QueryOptions{})
+	token, err := s.emailVerificationRepo.FindByUserID(userID)
 	if err != nil {
 		return nil, err
 	}

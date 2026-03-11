@@ -64,9 +64,7 @@ func main() {
 		appLogger.Global.Fatal().Err(errors.CreateValidationError(errs)).Msg("An error occurred during validation")
 	}
 
-	user, err := userRepo.FindByUsername(validatorData.Username, repository.QueryOptions{
-		Omit: []string{"Roles", "Sessions"},
-	})
+	user, err := userRepo.FindByUsername(validatorData.Username, repository.WithOmit("Roles", "Sessions"))
 	if err != nil {
 		if envType == "production" {
 			fmt.Println(errorMessage)
@@ -83,7 +81,7 @@ func main() {
 		appLogger.Global.Fatal().Err(err).Msg("An error occurred while hashing the user password")
 	}
 
-	if err := userRepo.Update(user, repository.QueryOptions{Select: []string{"hashed_password"}}); err != nil {
+	if err := userRepo.Update(user, repository.WithSelect("hashed_password")); err != nil {
 		if envType == "production" {
 			fmt.Println(errorMessage)
 		}

@@ -7,7 +7,7 @@ import (
 )
 
 type EmailSettings struct {
-	ID                       int        `gorm:"primaryKey;check:check_single_row_email,id = 1" json:"id"`
+	ID                       int        `gorm:"primaryKey;check:check_single_row_email,id = 1" json:"-"`
 	UpdatedAt                *time.Time `json:"updated_at"`
 	EmailProvider            string     `gorm:"type:varchar(20);default:'smtp'" json:"email_provider"` // smtp, sendgrid, mailgun, ses, postmark
 	EmailEnabled             bool       `gorm:"default:true" json:"email_enabled"`

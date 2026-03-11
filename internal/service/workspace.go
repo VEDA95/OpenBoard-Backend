@@ -18,7 +18,7 @@ func NewWorkspaceService(workspaceRepository *repository.WorkspaceRepository) *W
 	}
 }
 
-func (workspaceService *WorkspaceService) filterWorkspaceBoards(user *models.User, workspace *models.Worksapce) []*models.Board {
+func (workspaceService *WorkspaceService) filterWorkspaceBoards(user *models.User, workspace *models.Workspace) []*models.Board {
 	if user.IsSuperuser() || workspace.User.ID == user.ID || len(workspace.Boards) == 0 {
 		return workspace.Boards
 	}
@@ -45,11 +45,8 @@ func (workspaceService *WorkspaceService) filterWorkspaceBoards(user *models.Use
 	return boards
 }
 
-func (workspaceService *WorkspaceService) GetWorkspaces() ([]*models.Worksapce, error) {
-	workspaces, err := workspaceService.workspaceRepository.FindAll(repository.QueryOptions{
-		Preload: []string{"User", "Permissions", "Boards"},
-		Omit:    []string{"UserID"},
-	})
+func (workspaceService *WorkspaceService) GetWorkspaces() ([]*models.Workspace, error) {
+	workspaces, err := workspaceService.workspaceRepository.FindAll(repository.WorkspaceFullLoad...)
 	if err != nil {
 		return nil, err
 	}
@@ -57,11 +54,8 @@ func (workspaceService *WorkspaceService) GetWorkspaces() ([]*models.Worksapce, 
 	return workspaces, err
 }
 
-func (workspaceService *WorkspaceService) GetWorkspaceByID(ID string) (*models.Worksapce, error) {
-	workspace, err := workspaceService.workspaceRepository.FindByID(ID, repository.QueryOptions{
-		Preload: []string{"User", "Permissions", "Boards"},
-		Omit:    []string{"UserID"},
-	})
+func (workspaceService *WorkspaceService) GetWorkspaceByID(ID string) (*models.Workspace, error) {
+	workspace, err := workspaceService.workspaceRepository.FindByID(ID, repository.WorkspaceFullLoad...)
 	if err != nil {
 		return nil, err
 	}
@@ -69,11 +63,8 @@ func (workspaceService *WorkspaceService) GetWorkspaceByID(ID string) (*models.W
 	return workspace, nil
 }
 
-func (workspaceService *WorkspaceService) GetUserAccessibleWorkspaceByID(ID string, user *models.User) (*models.Worksapce, error) {
-	workspace, err := workspaceService.workspaceRepository.FindByID(ID, repository.QueryOptions{
-		Preload: []string{"User", "Permissions", "Boards"},
-		Omit:    []string{"UserID"},
-	})
+func (workspaceService *WorkspaceService) GetUserAccessibleWorkspaceByID(ID string, user *models.User) (*models.Workspace, error) {
+	workspace, err := workspaceService.workspaceRepository.FindByID(ID, repository.WorkspaceFullLoad...)
 	if err != nil {
 		return nil, err
 	}
@@ -95,11 +86,8 @@ func (workspaceService *WorkspaceService) GetUserAccessibleWorkspaceByID(ID stri
 	return workspace, nil
 }
 
-func (workspaceService *WorkspaceService) GetWorkspaceByUserID(ID string) ([]*models.Worksapce, error) {
-	workspaces, err := workspaceService.workspaceRepository.FindByUserID(ID, repository.QueryOptions{
-		Preload: []string{"User", "Permissions", "Boards"},
-		Omit:    []string{"UserID"},
-	})
+func (workspaceService *WorkspaceService) GetWorkspaceByUserID(ID string) ([]*models.Workspace, error) {
+	workspaces, err := workspaceService.workspaceRepository.FindByUserID(ID, repository.WorkspaceFullLoad...)
 	if err != nil {
 		return nil, err
 	}
@@ -107,7 +95,7 @@ func (workspaceService *WorkspaceService) GetWorkspaceByUserID(ID string) ([]*mo
 	return workspaces, nil
 }
 
-func (workspaceService *WorkspaceService) GetUserAccessibleWorkspaces(user *models.User) ([]*models.Worksapce, error) {
+func (workspaceService *WorkspaceService) GetUserAccessibleWorkspaces(user *models.User) ([]*models.Workspace, error) {
 	allWorkspaces, err := workspaceService.GetWorkspaces()
 	if err != nil {
 		return nil, err
@@ -117,7 +105,7 @@ func (workspaceService *WorkspaceService) GetUserAccessibleWorkspaces(user *mode
 		return allWorkspaces, nil
 	}
 
-	workspaces := make([]*models.Worksapce, 0)
+	workspaces := make([]*models.Workspace, 0)
 
 	for _, workspace := range allWorkspaces {
 		if workspace.IsPublic || workspace.User.ID == user.ID {
@@ -141,27 +129,33 @@ func (workspaceService *WorkspaceService) GetUserAccessibleWorkspaces(user *mode
 	return workspaces, nil
 }
 
-func (workspaceService *WorkspaceService) CreateWorkspace(data *validators.CreateWorkspaceValidator) (*models.Worksapce, error) {
-	if workspaceService.workspaceRepository.ExistsForUserByName(data.UserID, data.Name) {
+func (workspaceService *WorkspaceService) CreateWorkspace(user *models.User, data *validators.CreateWorkspaceValidator) (*models.Workspace, error) {
+	canManage := user.IsSuperuser() || user.IsAuthorized("workspaces:manage_all")
+
+	if data.UserID != nil && !canManage {
+		return nil, errors.New("unauthorized: no permission for creating workspaces for other users")
+	}
+
+	if data.UserID == nil || (data.UserID == nil && canManage) {
+		data.UserID = &user.ID
+	}
+
+	if workspaceService.workspaceRepository.ExistsForUserByName(*data.UserID, data.Name) {
 		return nil, errors.New("workspace already exists")
 	}
 
-	workspace := &models.Worksapce{
-		UserID:      data.UserID,
+	workspace := &models.Workspace{
 		Name:        data.Name,
 		Description: data.Description,
 		IsPublic:    data.IsPublic,
+		UserID:      *data.UserID,
 	}
 
 	if data.PermissionIDs != nil && len(*data.PermissionIDs) > 0 {
 		err := workspaceService.workspaceRepository.CreateWithPermissions(
 			workspace,
 			*data.PermissionIDs,
-			repository.QueryOptions{
-				Preload: []string{"User", "Permissions", "Boards"},
-				Omit:    []string{"UserID"},
-			},
-			repository.QueryOptions{},
+			repository.WithPreload("User", "Permissions", "Boards"),
 		)
 		if err != nil {
 			return nil, err
@@ -170,13 +164,7 @@ func (workspaceService *WorkspaceService) CreateWorkspace(data *validators.Creat
 		return workspace, nil
 	}
 
-	err := workspaceService.workspaceRepository.Create(
-		workspace,
-		repository.QueryOptions{
-			Preload: []string{"User", "Permissions", "Boards"},
-			Omit:    []string{"UserID"},
-		},
-	)
+	err := workspaceService.workspaceRepository.Create(workspace, repository.WithPreload("User", "Permissions", "Boards"))
 	if err != nil {
 		return nil, err
 	}
@@ -184,12 +172,12 @@ func (workspaceService *WorkspaceService) CreateWorkspace(data *validators.Creat
 	return workspace, nil
 }
 
-func (workspaceService *WorkspaceService) UpdateWorkspace(ID string, user *models.User, data *validators.UpdateWorkspaceValidator) (*models.Worksapce, error) {
+func (workspaceService *WorkspaceService) UpdateWorkspace(ID string, user *models.User, data *validators.UpdateWorkspaceValidator) (*models.Workspace, error) {
 	if !workspaceService.workspaceRepository.Exists(ID) {
 		return nil, errors.New("workspace does not exist")
 	}
 
-	workspace, err := workspaceService.workspaceRepository.FindByID(ID, repository.QueryOptions{})
+	workspace, err := workspaceService.workspaceRepository.FindByID(ID)
 	if err != nil {
 		return nil, err
 	}
@@ -221,11 +209,7 @@ func (workspaceService *WorkspaceService) UpdateWorkspace(ID string, user *model
 		err := workspaceService.workspaceRepository.UpdateWithPermissions(
 			workspace,
 			*data.PermissionIDs,
-			repository.QueryOptions{
-				Preload: []string{"User", "Permissions", "Boards"},
-				Omit:    []string{"UserID"},
-			},
-			repository.QueryOptions{},
+			repository.WithPreload("User", "Permissions", "Boards"),
 		)
 		if err != nil {
 			return nil, err
@@ -236,10 +220,8 @@ func (workspaceService *WorkspaceService) UpdateWorkspace(ID string, user *model
 
 	err2 := workspaceService.workspaceRepository.Update(
 		workspace,
-		repository.QueryOptions{
-			Preload: []string{"User", "Permissions", "Boards"},
-			Omit:    []string{"UserID"},
-		},
+		repository.WithPreload("User", "Permissions", "Boards"),
+		repository.WithOmit("UserID"),
 	)
 
 	if err2 != nil {

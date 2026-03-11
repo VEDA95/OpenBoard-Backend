@@ -2,28 +2,51 @@ package repository
 
 import "gorm.io/gorm"
 
-type QueryOptions struct {
-	Select  []string
-	Omit    []string
-	Preload []string
+type queryConfig struct {
+	selects  []string
+	omits    []string
+	preloads []string
 }
 
-func (options *QueryOptions) AppendToQuery(db *gorm.DB) *gorm.DB {
-	query := db
+type QueryOption func(*queryConfig)
 
-	if len(options.Select) > 0 {
-		query = query.Select(options.Select)
+func WithSelect(fields ...string) QueryOption {
+	return func(c *queryConfig) {
+		c.selects = append(c.selects, fields...)
 	}
-
-	if len(options.Omit) > 0 {
-		query = query.Omit(options.Omit...)
-	}
-
-	if len(options.Preload) > 0 {
-		for _, preloadOption := range options.Preload {
-			query = query.Preload(preloadOption)
-		}
-	}
-
-	return query
 }
+
+func WithOmit(fields ...string) QueryOption {
+	return func(c *queryConfig) {
+		c.omits = append(c.omits, fields...)
+	}
+}
+
+func WithPreload(relations ...string) QueryOption {
+	return func(c *queryConfig) {
+		c.preloads = append(c.preloads, relations...)
+	}
+}
+
+func applyOptions(db *gorm.DB, opts []QueryOption) *gorm.DB {
+	cfg := &queryConfig{}
+	for _, opt := range opts {
+		opt(cfg)
+	}
+
+	if len(cfg.selects) > 0 {
+		db = db.Select(cfg.selects)
+	}
+
+	if len(cfg.omits) > 0 {
+		db = db.Omit(cfg.omits...)
+	}
+
+	for _, rel := range cfg.preloads {
+		db = db.Preload(rel)
+	}
+
+	return db
+}
+
+var IDOnly = []QueryOption{WithSelect("id")}

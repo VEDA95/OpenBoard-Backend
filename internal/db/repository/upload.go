@@ -14,39 +14,39 @@ func NewFileUploadRepository(db *gorm.DB) *FileUploadRepository {
 	return &FileUploadRepository{db: db}
 }
 
-func (fileUploadRepo *FileUploadRepository) FindAll(options QueryOptions) ([]*models.FileUpload, error) {
+func (fileUploadRepo *FileUploadRepository) FindAll(opts ...QueryOption) ([]*models.FileUpload, error) {
 	fileUploads := make([]*models.FileUpload, 0)
-	if err := options.AppendToQuery(fileUploadRepo.db).Find(fileUploads).Error; err != nil {
+	if err := applyOptions(fileUploadRepo.db, opts).Find(fileUploads).Error; err != nil {
 		return nil, err
 	}
 
 	return fileUploads, nil
 }
 
-func (fileUploadRepo *FileUploadRepository) FindByID(ID string, options QueryOptions) (*models.FileUpload, error) {
+func (fileUploadRepo *FileUploadRepository) FindByID(ID string, opts ...QueryOption) (*models.FileUpload, error) {
 	fileUpload := new(models.FileUpload)
-	if err := options.AppendToQuery(fileUploadRepo.db).Where("id = ?", ID).First(fileUpload).Error; err != nil {
+	if err := applyOptions(fileUploadRepo.db, opts).Where("id = ?", ID).First(fileUpload).Error; err != nil {
 		return nil, err
 	}
 
 	return fileUpload, nil
 }
 
-func (fileUploadRepo *FileUploadRepository) FindByUserID(ID string, options QueryOptions) (*models.FileUpload, error) {
+func (fileUploadRepo *FileUploadRepository) FindByUserID(ID string, opts ...QueryOption) (*models.FileUpload, error) {
 	fileUpload := new(models.FileUpload)
-	if err := options.AppendToQuery(fileUploadRepo.db).Where("user_id = ?", ID).First(fileUpload).Error; err != nil {
+	if err := applyOptions(fileUploadRepo.db, opts).Where("user_id = ?", ID).First(fileUpload).Error; err != nil {
 		return nil, err
 	}
 
 	return fileUpload, nil
 }
 
-func (fileUploadRepo *FileUploadRepository) Create(fileUpload *models.FileUpload, options QueryOptions) error {
-	return options.AppendToQuery(fileUploadRepo.db).Create(fileUpload).Error
+func (fileUploadRepo *FileUploadRepository) Create(fileUpload *models.FileUpload, opts ...QueryOption) error {
+	return applyOptions(fileUploadRepo.db, opts).Create(fileUpload).Error
 }
 
-func (fileUploadRepo *FileUploadRepository) Update(fileUpload *models.FileUpload, options QueryOptions) error {
-	return options.AppendToQuery(fileUploadRepo.db).Save(fileUpload).Error
+func (fileUploadRepo *FileUploadRepository) Update(fileUpload *models.FileUpload, opts ...QueryOption) error {
+	return applyOptions(fileUploadRepo.db, opts).Save(fileUpload).Error
 }
 
 func (fileUploadRepo *FileUploadRepository) Delete(ID string) error {

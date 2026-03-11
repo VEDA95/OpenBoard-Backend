@@ -66,30 +66,22 @@ type OAuthUserInfo struct {
 
 // GetProviders returns all external auth providers
 func (s *ExternalAuthProviderService) GetProviders() ([]*models.ExternalAuthProvider, error) {
-	return s.providerRepo.FindAll(repository.QueryOptions{
-		Preload: []string{"Permissions"},
-	})
+	return s.providerRepo.FindAll(repository.WithPreload("Permissions"))
 }
 
 // GetEnabledProviders returns all enabled external auth providers
 func (s *ExternalAuthProviderService) GetEnabledProviders() ([]*models.ExternalAuthProvider, error) {
-	return s.providerRepo.FindEnabled(repository.QueryOptions{
-		Omit: []string{"ClientSecret"},
-	})
+	return s.providerRepo.FindEnabled(repository.WithOmit("ClientSecret"))
 }
 
 // GetProviderByID returns a provider by ID
 func (s *ExternalAuthProviderService) GetProviderByID(ID string) (*models.ExternalAuthProvider, error) {
-	return s.providerRepo.FindByID(ID, repository.QueryOptions{
-		Preload: []string{"Permissions"},
-	})
+	return s.providerRepo.FindByID(ID, repository.WithPreload("Permissions"))
 }
 
 // GetProviderByName returns a provider by name
 func (s *ExternalAuthProviderService) GetProviderByName(name string) (*models.ExternalAuthProvider, error) {
-	return s.providerRepo.FindByName(name, repository.QueryOptions{
-		Preload: []string{"Permissions"},
-	})
+	return s.providerRepo.FindByName(name, repository.WithPreload("Permissions"))
 }
 
 // CreateProvider creates a new external auth provider
@@ -119,10 +111,7 @@ func (s *ExternalAuthProviderService) CreateProvider(data *validators.CreateExte
 		err := s.providerRepo.CreateWithPermissions(
 			provider,
 			*data.PermissionIDs,
-			repository.QueryOptions{
-				Preload: []string{"Permissions"},
-			},
-			repository.QueryOptions{},
+			repository.WithPreload("Permissions"),
 		)
 		if err != nil {
 			return nil, err
@@ -130,9 +119,7 @@ func (s *ExternalAuthProviderService) CreateProvider(data *validators.CreateExte
 		return provider, nil
 	}
 
-	err := s.providerRepo.Create(provider, repository.QueryOptions{
-		Preload: []string{"Permissions"},
-	})
+	err := s.providerRepo.Create(provider, repository.WithPreload("Permissions"))
 	if err != nil {
 		return nil, err
 	}
@@ -142,7 +129,7 @@ func (s *ExternalAuthProviderService) CreateProvider(data *validators.CreateExte
 
 // UpdateProvider updates an existing external auth provider
 func (s *ExternalAuthProviderService) UpdateProvider(ID string, data *validators.UpdateExternalProviderValidator) (*models.ExternalAuthProvider, error) {
-	provider, err := s.providerRepo.FindByID(ID, repository.QueryOptions{})
+	provider, err := s.providerRepo.FindByID(ID)
 	if err != nil {
 		return nil, err
 	}
@@ -202,10 +189,7 @@ func (s *ExternalAuthProviderService) UpdateProvider(ID string, data *validators
 		err := s.providerRepo.UpdateWithPermissions(
 			provider,
 			*data.PermissionIDs,
-			repository.QueryOptions{
-				Preload: []string{"Permissions"},
-			},
-			repository.QueryOptions{},
+			repository.WithPreload("Permissions"),
 		)
 		if err != nil {
 			return nil, err
@@ -213,9 +197,7 @@ func (s *ExternalAuthProviderService) UpdateProvider(ID string, data *validators
 		return provider, nil
 	}
 
-	err = s.providerRepo.Update(provider, repository.QueryOptions{
-		Preload: []string{"Permissions"},
-	})
+	err = s.providerRepo.Update(provider, repository.WithPreload("Permissions"))
 	if err != nil {
 		return nil, err
 	}
@@ -386,10 +368,7 @@ func (s *ExternalAuthProviderService) OAuthLogin(
 	}
 
 	// Find or create user
-	user, err := s.userRepo.FindByEmail(userInfo.Email, repository.QueryOptions{
-		Preload: []string{"Roles", "Roles.Permissions"},
-		Omit:    []string{"Sessions"},
-	})
+	user, err := s.userRepo.FindByEmail(userInfo.Email, repository.UserFullLoad...)
 
 	if err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
@@ -402,9 +381,7 @@ func (s *ExternalAuthProviderService) OAuthLogin(
 		}
 
 		// Create new user
-		userRole, err := s.roleRepo.FindByName(authSettings.DefaultUserRole, repository.QueryOptions{
-			Select: []string{"id"},
-		})
+		userRole, err := s.roleRepo.FindByName(authSettings.DefaultUserRole, repository.WithSelect("id"))
 		if err != nil {
 			return nil, fmt.Errorf("failed to get default role: %w", err)
 		}
@@ -445,11 +422,8 @@ func (s *ExternalAuthProviderService) OAuthLogin(
 		err = s.userRepo.CreateWithRoles(
 			user,
 			[]string{userRole.ID},
-			repository.QueryOptions{
-				Preload: []string{"Roles", "Roles.Permissions"},
-				Omit:    []string{"Sessions"},
-			},
-			repository.QueryOptions{},
+			nil,
+			repository.UserFullLoad...,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create user: %w", err)
@@ -480,16 +454,14 @@ func (s *ExternalAuthProviderService) OAuthLogin(
 		return nil, err
 	}
 
-	err = s.sessionRepo.Create(session, repository.QueryOptions{
-		Select: []string{"id", "type", "ip_address", "user_agent", "expires_on", "user_id", "access_token", "remember_me", "refresh_expires_on", "refresh_token"},
-	})
+	err = s.sessionRepo.Create(session, repository.WithSelect("id", "type", "ip_address", "user_agent", "expires_on", "user_id", "access_token", "remember_me", "refresh_expires_on", "refresh_token"))
 	if err != nil {
 		return nil, err
 	}
 
 	// Update last login
 	user.LastLogin = &now
-	if err := s.userRepo.Update(user, repository.QueryOptions{Select: []string{"last_login"}}); err != nil {
+	if err := s.userRepo.Update(user, repository.WithSelect("last_login")); err != nil {
 		return nil, err
 	}
 

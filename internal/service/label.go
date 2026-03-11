@@ -24,19 +24,15 @@ func NewLabelService(
 }
 
 func (labelService *LabelService) GetLabels() ([]*models.Label, error) {
-	return labelService.labelRepo.FindAll(repository.QueryOptions{
-		Preload: []string{"Board"},
-	})
+	return labelService.labelRepo.FindAll(repository.WithPreload("Board"))
 }
 
 func (labelService *LabelService) GetLabelByID(ID string) (*models.Label, error) {
-	return labelService.labelRepo.FindByID(ID, repository.QueryOptions{
-		Preload: []string{"Board"},
-	})
+	return labelService.labelRepo.FindByID(ID, repository.WithPreload("Board"))
 }
 
 func (labelService *LabelService) GetLabelsByBoardID(boardID string) ([]*models.Label, error) {
-	return labelService.labelRepo.FindBoardID(boardID, repository.QueryOptions{})
+	return labelService.labelRepo.FindBoardID(boardID)
 }
 
 func (labelService *LabelService) CreateLabel(data *validators.CreateLabelValidator) (*models.Label, error) {
@@ -46,7 +42,7 @@ func (labelService *LabelService) CreateLabel(data *validators.CreateLabelValida
 		BoardID: data.BoardID,
 	}
 
-	if err := labelService.labelRepo.Create(label, repository.QueryOptions{}); err != nil {
+	if err := labelService.labelRepo.Create(label); err != nil {
 		return nil, err
 	}
 
@@ -54,7 +50,7 @@ func (labelService *LabelService) CreateLabel(data *validators.CreateLabelValida
 }
 
 func (labelService *LabelService) UpdateLabel(ID string, data *validators.UpdateLabelValidator) (*models.Label, error) {
-	label, err := labelService.labelRepo.FindByID(ID, repository.QueryOptions{})
+	label, err := labelService.labelRepo.FindByID(ID)
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +63,7 @@ func (labelService *LabelService) UpdateLabel(ID string, data *validators.Update
 		label.Color = *data.Color
 	}
 
-	if err := labelService.labelRepo.Update(label, repository.QueryOptions{}); err != nil {
+	if err := labelService.labelRepo.Update(label); err != nil {
 		return nil, err
 	}
 

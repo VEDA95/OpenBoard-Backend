@@ -25,10 +25,10 @@ func NewFileUploadService(fileUploadRepo *repository.FileUploadRepository, userR
 }
 
 func (fileUploadService *FileUploadService) GetAll() ([]*models.FileUpload, error) {
-	return fileUploadService.fileUploadRepo.FindAll(repository.QueryOptions{
-		Preload: []string{"User"},
-		Omit:    []string{"UserID"},
-	})
+	return fileUploadService.fileUploadRepo.FindAll(
+		repository.WithPreload("User"),
+		repository.WithOmit("UserID"),
+	)
 }
 
 func (fileUploadService *FileUploadService) GetByID(ID string) (*models.FileUpload, error) {
@@ -36,10 +36,10 @@ func (fileUploadService *FileUploadService) GetByID(ID string) (*models.FileUplo
 		return nil, errors.New("file upload entry does not exist")
 	}
 
-	return fileUploadService.fileUploadRepo.FindByID(ID, repository.QueryOptions{
-		Preload: []string{"User"},
-		Omit:    []string{"UserID"},
-	})
+	return fileUploadService.fileUploadRepo.FindByID(ID,
+		repository.WithPreload("User"),
+		repository.WithOmit("UserID"),
+	)
 }
 
 func (fileUploadService *FileUploadService) UploadFileAsUserThumbnail(user *models.User, file *multipart.FileHeader) (*models.FileUpload, error) {
@@ -53,13 +53,13 @@ func (fileUploadService *FileUploadService) UploadFileAsUserThumbnail(user *mode
 		UserID:    user.ID,
 	}
 
-	if err := fileUploadService.fileUploadRepo.Create(fileData, repository.QueryOptions{Preload: []string{"User"}}); err != nil {
+	if err := fileUploadService.fileUploadRepo.Create(fileData, repository.WithPreload("User")); err != nil {
 		return nil, err
 	}
 
 	user.ThumbnailID = &fileData.ID
 
-	if err := fileUploadService.userRepo.Update(user, repository.QueryOptions{Select: []string{"thumbnail_id"}}); err != nil {
+	if err := fileUploadService.userRepo.Update(user, repository.WithSelect("thumbnail_id")); err != nil {
 		return nil, err
 	}
 
@@ -71,9 +71,7 @@ func (fileUploadService *FileUploadService) UploadFileAsCardAttachment(ID string
 		return nil, errors.New("card does not exist")
 	}
 
-	card, err := fileUploadService.cardRepo.FindByID(ID, repository.QueryOptions{
-		Preload: []string{"Attachments"},
-	})
+	card, err := fileUploadService.cardRepo.FindByID(ID, repository.WithPreload("Attachments"))
 	if err != nil {
 		return nil, err
 	}
@@ -88,13 +86,13 @@ func (fileUploadService *FileUploadService) UploadFileAsCardAttachment(ID string
 		UserID:    user.ID,
 	}
 
-	if err := fileUploadService.fileUploadRepo.Create(fileData, repository.QueryOptions{Preload: []string{"User"}}); err != nil {
+	if err := fileUploadService.fileUploadRepo.Create(fileData, repository.WithPreload("User")); err != nil {
 		return nil, err
 	}
 
 	card.Attachments = append(card.Attachments, fileData)
 
-	if err := fileUploadService.cardRepo.Update(card, repository.QueryOptions{Preload: []string{"Attachments"}}); err != nil {
+	if err := fileUploadService.cardRepo.Update(card, repository.WithPreload("Attachments")); err != nil {
 		return nil, err
 	}
 

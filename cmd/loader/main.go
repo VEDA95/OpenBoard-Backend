@@ -23,7 +23,7 @@ func main() {
 		&models.Permission{},
 		&models.PasswordResetToken{},
 		&models.EmailVerificationToken{},
-		&models.Worksapce{},
+		&models.Workspace{},
 		&models.Board{},
 		&models.List{},
 		&models.Card{},

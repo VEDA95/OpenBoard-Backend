@@ -53,6 +53,7 @@ func (boardHandler *BoardHandler) GETByID(context *fiber.Ctx) error {
 }
 
 func (boardHandler *BoardHandler) POST(context *fiber.Ctx) error {
+	session := context.Locals("auth_session").(models.Session)
 	validatorData := new(validators.CreateBoardValidator)
 
 	if err := context.BodyParser(validatorData); err != nil {
@@ -63,7 +64,7 @@ func (boardHandler *BoardHandler) POST(context *fiber.Ctx) error {
 		return errors.CreateValidationError(errs)
 	}
 
-	board, err := boardHandler.boardService.CreateBoard(validatorData)
+	board, err := boardHandler.boardService.CreateBoard(session.User, validatorData)
 	if err != nil {
 		return err
 	}

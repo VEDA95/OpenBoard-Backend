@@ -6,6 +6,10 @@ import (
 	"gorm.io/gorm"
 )
 
+var CommentFullLoad = []QueryOption{
+	WithPreload("User", "Card"),
+}
+
 type CommentRepository struct {
 	db *gorm.DB
 }
@@ -14,48 +18,48 @@ func NewCommentRepository(db *gorm.DB) *CommentRepository {
 	return &CommentRepository{db: db}
 }
 
-func (commentRepo *CommentRepository) FindAll(options QueryOptions) ([]*models.Comment, error) {
+func (commentRepo *CommentRepository) FindAll(opts ...QueryOption) ([]*models.Comment, error) {
 	comments := make([]*models.Comment, 0)
-	if err := options.AppendToQuery(commentRepo.db).Find(&comments).Error; err != nil {
+	if err := applyOptions(commentRepo.db, opts).Find(&comments).Error; err != nil {
 		return nil, err
 	}
 
 	return comments, nil
 }
 
-func (commentRepo *CommentRepository) FindByUserID(ID string, options QueryOptions) ([]*models.Comment, error) {
+func (commentRepo *CommentRepository) FindByUserID(ID string, opts ...QueryOption) ([]*models.Comment, error) {
 	comments := make([]*models.Comment, 0)
-	if err := options.AppendToQuery(commentRepo.db).Where("user_id = ?", ID).Find(&comments).Error; err != nil {
+	if err := applyOptions(commentRepo.db, opts).Where("user_id = ?", ID).Find(&comments).Error; err != nil {
 		return nil, err
 	}
 
 	return comments, nil
 }
 
-func (commentRepo *CommentRepository) FindByCardID(ID string, options QueryOptions) ([]*models.Comment, error) {
+func (commentRepo *CommentRepository) FindByCardID(ID string, opts ...QueryOption) ([]*models.Comment, error) {
 	comments := make([]*models.Comment, 0)
-	if err := options.AppendToQuery(commentRepo.db).Where("card_id = ?", ID).Find(&comments).Error; err != nil {
+	if err := applyOptions(commentRepo.db, opts).Where("card_id = ?", ID).Find(&comments).Error; err != nil {
 		return nil, err
 	}
 
 	return comments, nil
 }
 
-func (commentRepo *CommentRepository) FindByID(ID string, options QueryOptions) (*models.Comment, error) {
+func (commentRepo *CommentRepository) FindByID(ID string, opts ...QueryOption) (*models.Comment, error) {
 	comment := new(models.Comment)
-	if err := options.AppendToQuery(commentRepo.db).Where("id = ?", ID).First(comment).Error; err != nil {
+	if err := applyOptions(commentRepo.db, opts).Where("id = ?", ID).First(comment).Error; err != nil {
 		return nil, err
 	}
 
 	return comment, nil
 }
 
-func (commentRepo *CommentRepository) Create(comment *models.Comment, options QueryOptions) error {
-	return options.AppendToQuery(commentRepo.db).Create(comment).Error
+func (commentRepo *CommentRepository) Create(comment *models.Comment, opts ...QueryOption) error {
+	return applyOptions(commentRepo.db, opts).Create(comment).Error
 }
 
-func (commentRepo *CommentRepository) Update(comment *models.Comment, options QueryOptions) error {
-	return options.AppendToQuery(commentRepo.db).Save(comment).Error
+func (commentRepo *CommentRepository) Update(comment *models.Comment, opts ...QueryOption) error {
+	return applyOptions(commentRepo.db, opts).Save(comment).Error
 }
 
 func (commentRepo *CommentRepository) Delete(ID string) error {

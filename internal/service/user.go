@@ -23,10 +23,7 @@ func NewUserService(userRepo *repository.UserRepository, roleRepo *repository.Ro
 }
 
 func (userService *UserService) GetUsers() ([]*models.User, error) {
-	users, err := userService.userRepo.FindAll(repository.QueryOptions{
-		Preload: []string{"Roles", "Roles.Permissions"},
-		Omit:    []string{"Sessions"},
-	})
+	users, err := userService.userRepo.FindAll(repository.UserFullLoad...)
 	if err != nil {
 		return nil, err
 	}
@@ -35,10 +32,7 @@ func (userService *UserService) GetUsers() ([]*models.User, error) {
 }
 
 func (userService *UserService) GetUser(ID string) (*models.User, error) {
-	user, err := userService.userRepo.FindByID(ID, repository.QueryOptions{
-		Preload: []string{"Roles", "Roles.Permissions"},
-		Omit:    []string{"Sessions"},
-	})
+	user, err := userService.userRepo.FindByID(ID, repository.UserFullLoad...)
 	if err != nil {
 		return nil, err
 	}
@@ -47,10 +41,7 @@ func (userService *UserService) GetUser(ID string) (*models.User, error) {
 }
 
 func (userService *UserService) GetUserByUsername(username string) (*models.User, error) {
-	user, err := userService.userRepo.FindByUsername(username, repository.QueryOptions{
-		Preload: []string{"Roles", "Roles.Permissions"},
-		Omit:    []string{"Sessions"},
-	})
+	user, err := userService.userRepo.FindByUsername(username, repository.UserFullLoad...)
 	if err != nil {
 		return nil, err
 	}
@@ -59,10 +50,7 @@ func (userService *UserService) GetUserByUsername(username string) (*models.User
 }
 
 func (userService *UserService) GetUserByEmail(email string) (*models.User, error) {
-	user, err := userService.userRepo.FindByEmail(email, repository.QueryOptions{
-		Preload: []string{"Roles", "Roles.Permissions"},
-		Omit:    []string{"Sessions"},
-	})
+	user, err := userService.userRepo.FindByEmail(email, repository.UserFullLoad...)
 	if err != nil {
 		return nil, err
 	}
@@ -71,9 +59,7 @@ func (userService *UserService) GetUserByEmail(email string) (*models.User, erro
 }
 
 func (userService *UserService) CreateUser(data *validators.CreateUserValidator) (*models.User, error) {
-	existingUserByUsername, err := userService.userRepo.FindByUsername(data.Username, repository.QueryOptions{
-		Select: []string{"id"},
-	})
+	existingUserByUsername, err := userService.userRepo.FindByUsername(data.Username, repository.IDOnly...)
 	if !errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, err
 	}
@@ -82,9 +68,7 @@ func (userService *UserService) CreateUser(data *validators.CreateUserValidator)
 		return nil, errors.New("username already exists")
 	}
 
-	existingUserByEmail, err := userService.userRepo.FindByEmail(data.Email, repository.QueryOptions{
-		Select: []string{"id"},
-	})
+	existingUserByEmail, err := userService.userRepo.FindByEmail(data.Email, repository.IDOnly...)
 	if !errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, err
 	}
@@ -113,12 +97,10 @@ func (userService *UserService) CreateUser(data *validators.CreateUserValidator)
 		err := userService.userRepo.CreateWithRoles(
 			user,
 			*data.Roles,
-			repository.QueryOptions{
-				Omit: []string{"created_at", "updated_at", "Roles", "Sessions"},
+			[]repository.QueryOption{
+				repository.WithOmit("created_at", "updated_at", "Roles", "Sessions"),
 			},
-			repository.QueryOptions{
-				Omit: []string{"Roles.Permissions"},
-			},
+			repository.WithOmit("Roles.Permissions"),
 		)
 		if err != nil {
 			return nil, err
@@ -127,9 +109,7 @@ func (userService *UserService) CreateUser(data *validators.CreateUserValidator)
 		return user, nil
 	}
 
-	err2 := userService.userRepo.Create(user, repository.QueryOptions{
-		Omit: []string{"Sessions"},
-	})
+	err2 := userService.userRepo.Create(user, repository.WithOmit("Sessions"))
 
 	if err2 != nil {
 		return nil, err2
@@ -139,10 +119,10 @@ func (userService *UserService) CreateUser(data *validators.CreateUserValidator)
 }
 
 func (userService *UserService) UpdateUser(ID string, data *validators.UpdateUserValidator) (*models.User, error) {
-	user, err := userService.userRepo.FindByID(ID, repository.QueryOptions{
-		Preload: []string{"Roles.Permissions"},
-		Omit:    []string{"Sessions"},
-	})
+	user, err := userService.userRepo.FindByID(ID,
+		repository.WithPreload("Roles.Permissions"),
+		repository.WithOmit("Sessions"),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -186,12 +166,10 @@ func (userService *UserService) UpdateUser(ID string, data *validators.UpdateUse
 		err := userService.userRepo.UpdateWithRoles(
 			user,
 			*data.Roles,
-			repository.QueryOptions{
-				Select: columns,
+			[]repository.QueryOption{
+				repository.WithSelect(columns...),
 			},
-			repository.QueryOptions{
-				Omit: []string{"Roles.Permissions"},
-			},
+			repository.WithOmit("Roles.Permissions"),
 		)
 		if err != nil {
 			return nil, err
@@ -199,9 +177,7 @@ func (userService *UserService) UpdateUser(ID string, data *validators.UpdateUse
 
 		return user, nil
 	}
-	err2 := userService.userRepo.Update(user, repository.QueryOptions{
-		Select: columns,
-	})
+	err2 := userService.userRepo.Update(user, repository.WithSelect(columns...))
 	if err2 != nil {
 		return nil, err2
 	}

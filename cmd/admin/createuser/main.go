@@ -94,9 +94,7 @@ func main() {
 		appLogger.Global.Fatal().Err(err).Msg("An error occurred during the user creation process")
 	}
 
-	existingUserByUsername, err := userRepo.FindByUsername(validatorData.Username, repository.QueryOptions{
-		Select: []string{"id"},
-	})
+	existingUserByUsername, err := userRepo.FindByUsername(validatorData.Username, repository.WithSelect("id"))
 	if !errors.Is(err, gorm.ErrRecordNotFound) {
 		if envType == "production" {
 			fmt.Println(errorMessage)
@@ -115,9 +113,7 @@ func main() {
 		appLogger.Global.Fatal().Err(err).Msg("An error occurred when checking if the user already exists")
 	}
 
-	existingUserByEmail, err := userRepo.FindByEmail(validatorData.Email, repository.QueryOptions{
-		Select: []string{"id"},
-	})
+	existingUserByEmail, err := userRepo.FindByEmail(validatorData.Email, repository.WithSelect("id"))
 	if !errors.Is(err, gorm.ErrRecordNotFound) {
 		if envType == "production" {
 			fmt.Println(errorMessage)
@@ -175,7 +171,7 @@ func main() {
 		userRoleIDs[index] = userRoles[index].ID
 	}
 
-	err2 := userRepo.CreateWithRoles(user, userRoleIDs, repository.QueryOptions{Omit: []string{"Sessions"}}, repository.QueryOptions{Omit: []string{"Permissions"}})
+	err2 := userRepo.CreateWithRoles(user, userRoleIDs, []repository.QueryOption{repository.WithOmit("Sessions")}, repository.WithOmit("Permissions"))
 	if err2 != nil {
 		if envType == "production" {
 			fmt.Println(errorMessage)

@@ -14,38 +14,38 @@ func NewEmailVerificationRepository(db *gorm.DB) *EmailVerificationRepository {
 	return &EmailVerificationRepository{db: db}
 }
 
-func (repo *EmailVerificationRepository) FindByID(ID string, options QueryOptions) (*models.EmailVerificationToken, error) {
+func (repo *EmailVerificationRepository) FindByID(ID string, opts ...QueryOption) (*models.EmailVerificationToken, error) {
 	token := new(models.EmailVerificationToken)
 
-	if err := options.AppendToQuery(repo.db).Where("id = ?", ID).First(token).Error; err != nil {
+	if err := applyOptions(repo.db, opts).Where("id = ?", ID).First(token).Error; err != nil {
 		return nil, err
 	}
 
 	return token, nil
 }
 
-func (repo *EmailVerificationRepository) FindByUserID(userID string, options QueryOptions) (*models.EmailVerificationToken, error) {
+func (repo *EmailVerificationRepository) FindByUserID(userID string, opts ...QueryOption) (*models.EmailVerificationToken, error) {
 	token := new(models.EmailVerificationToken)
 
-	if err := options.AppendToQuery(repo.db).Where("user_id = ?", userID).First(token).Error; err != nil {
+	if err := applyOptions(repo.db, opts).Where("user_id = ?", userID).First(token).Error; err != nil {
 		return nil, err
 	}
 
 	return token, nil
 }
 
-func (repo *EmailVerificationRepository) FindAllByUserID(userID string, options QueryOptions) ([]*models.EmailVerificationToken, error) {
+func (repo *EmailVerificationRepository) FindAllByUserID(userID string, opts ...QueryOption) ([]*models.EmailVerificationToken, error) {
 	tokens := make([]*models.EmailVerificationToken, 0)
 
-	if err := options.AppendToQuery(repo.db).Where("user_id = ?", userID).Find(&tokens).Error; err != nil {
+	if err := applyOptions(repo.db, opts).Where("user_id = ?", userID).Find(&tokens).Error; err != nil {
 		return nil, err
 	}
 
 	return tokens, nil
 }
 
-func (repo *EmailVerificationRepository) Create(token *models.EmailVerificationToken, options QueryOptions) error {
-	return options.AppendToQuery(repo.db).Create(token).Error
+func (repo *EmailVerificationRepository) Create(token *models.EmailVerificationToken, opts ...QueryOption) error {
+	return applyOptions(repo.db, opts).Create(token).Error
 }
 
 func (repo *EmailVerificationRepository) Delete(ID string) error {

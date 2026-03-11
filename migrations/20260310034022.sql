@@ -16,9 +16,13 @@ CREATE TABLE "public"."auth_settings" (
   "max_login_attempts" bigint NULL DEFAULT 5,
   "lockout_duration" bigint NULL DEFAULT 18000,
   "two_factor_authentication" boolean NULL DEFAULT false,
+  "pending_two_factor_auth_expiry" bigint NULL DEFAULT 900,
   "two_factor_required" boolean NULL DEFAULT false,
   "enable_o_auth" boolean NULL DEFAULT false,
-  "cors_domain" character varying(255) NOT NULL DEFAULT 'http://localhost:8000',
+  "cors_domain" character varying(255) NOT NULL,
+  "web_authn_rp_id" character varying(255) NULL DEFAULT 'localhost',
+  "web_authn_rp_display_name" character varying(255) NULL DEFAULT 'Open Board',
+  "web_authn_rp_origins" text NULL DEFAULT '',
   PRIMARY KEY ("id"),
   CONSTRAINT "check_single_row_auth" CHECK (id = 1)
 );
@@ -303,8 +307,14 @@ CREATE TABLE "public"."users" (
 CREATE INDEX "idx_users_email" ON "public"."users" ("email");
 -- Create index "idx_users_username" to table: "users"
 CREATE INDEX "idx_users_username" ON "public"."users" ("username");
--- Create "worksapces" table
-CREATE TABLE "public"."worksapces" (
+-- Create "workspace_permissions" table
+CREATE TABLE "public"."workspace_permissions" (
+  "workspace_id" uuid NOT NULL,
+  "permission_id" uuid NOT NULL,
+  PRIMARY KEY ("workspace_id", "permission_id")
+);
+-- Create "workspaces" table
+CREATE TABLE "public"."workspaces" (
   "id" uuid NOT NULL,
   "created_at" timestamptz NOT NULL,
   "updated_at" timestamptz NULL,
@@ -314,16 +324,10 @@ CREATE TABLE "public"."worksapces" (
   "user_id" uuid NOT NULL,
   PRIMARY KEY ("id")
 );
--- Create "workspace_permissions" table
-CREATE TABLE "public"."workspace_permissions" (
-  "worksapce_id" uuid NOT NULL,
-  "permission_id" uuid NOT NULL,
-  PRIMARY KEY ("worksapce_id", "permission_id")
-);
 -- Modify "board_permissions" table
 ALTER TABLE "public"."board_permissions" ADD CONSTRAINT "fk_board_permissions_board" FOREIGN KEY ("board_id") REFERENCES "public"."boards" ("id") ON UPDATE NO ACTION ON DELETE NO ACTION, ADD CONSTRAINT "fk_board_permissions_permission" FOREIGN KEY ("permission_id") REFERENCES "public"."permissions" ("id") ON UPDATE NO ACTION ON DELETE NO ACTION;
 -- Modify "boards" table
-ALTER TABLE "public"."boards" ADD CONSTRAINT "fk_boards_user" FOREIGN KEY ("user_id") REFERENCES "public"."users" ("id") ON UPDATE NO ACTION ON DELETE NO ACTION, ADD CONSTRAINT "fk_worksapces_boards" FOREIGN KEY ("workspace_id") REFERENCES "public"."worksapces" ("id") ON UPDATE NO ACTION ON DELETE NO ACTION;
+ALTER TABLE "public"."boards" ADD CONSTRAINT "fk_boards_user" FOREIGN KEY ("user_id") REFERENCES "public"."users" ("id") ON UPDATE NO ACTION ON DELETE NO ACTION, ADD CONSTRAINT "fk_workspaces_boards" FOREIGN KEY ("workspace_id") REFERENCES "public"."workspaces" ("id") ON UPDATE NO ACTION ON DELETE NO ACTION;
 -- Modify "card_activities" table
 ALTER TABLE "public"."card_activities" ADD CONSTRAINT "fk_card_activities_user" FOREIGN KEY ("user_id") REFERENCES "public"."users" ("id") ON UPDATE NO ACTION ON DELETE NO ACTION, ADD CONSTRAINT "fk_cards_activities" FOREIGN KEY ("card_id") REFERENCES "public"."cards" ("id") ON UPDATE NO ACTION ON DELETE NO ACTION;
 -- Modify "card_attachments" table
@@ -360,7 +364,7 @@ ALTER TABLE "public"."sessions" ADD CONSTRAINT "fk_users_sessions" FOREIGN KEY (
 ALTER TABLE "public"."user_roles" ADD CONSTRAINT "fk_user_roles_role" FOREIGN KEY ("role_id") REFERENCES "public"."roles" ("id") ON UPDATE NO ACTION ON DELETE NO ACTION, ADD CONSTRAINT "fk_user_roles_user" FOREIGN KEY ("user_id") REFERENCES "public"."users" ("id") ON UPDATE NO ACTION ON DELETE NO ACTION;
 -- Modify "users" table
 ALTER TABLE "public"."users" ADD CONSTRAINT "fk_users_thumbnail" FOREIGN KEY ("thumbnail_id") REFERENCES "public"."file_uploads" ("id") ON UPDATE NO ACTION ON DELETE NO ACTION;
--- Modify "worksapces" table
-ALTER TABLE "public"."worksapces" ADD CONSTRAINT "fk_worksapces_user" FOREIGN KEY ("user_id") REFERENCES "public"."users" ("id") ON UPDATE NO ACTION ON DELETE NO ACTION;
 -- Modify "workspace_permissions" table
-ALTER TABLE "public"."workspace_permissions" ADD CONSTRAINT "fk_workspace_permissions_permission" FOREIGN KEY ("permission_id") REFERENCES "public"."permissions" ("id") ON UPDATE NO ACTION ON DELETE NO ACTION, ADD CONSTRAINT "fk_workspace_permissions_worksapce" FOREIGN KEY ("worksapce_id") REFERENCES "public"."worksapces" ("id") ON UPDATE NO ACTION ON DELETE NO ACTION;
+ALTER TABLE "public"."workspace_permissions" ADD CONSTRAINT "fk_workspace_permissions_permission" FOREIGN KEY ("permission_id") REFERENCES "public"."permissions" ("id") ON UPDATE NO ACTION ON DELETE NO ACTION, ADD CONSTRAINT "fk_workspace_permissions_workspace" FOREIGN KEY ("workspace_id") REFERENCES "public"."workspaces" ("id") ON UPDATE NO ACTION ON DELETE NO ACTION;
+-- Modify "workspaces" table
+ALTER TABLE "public"."workspaces" ADD CONSTRAINT "fk_workspaces_user" FOREIGN KEY ("user_id") REFERENCES "public"."users" ("id") ON UPDATE NO ACTION ON DELETE NO ACTION;

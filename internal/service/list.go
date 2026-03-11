@@ -15,25 +15,19 @@ func NewListService(listRepo *repository.ListRepository) *ListService {
 }
 
 func (listService *ListService) GetLists() ([]*models.List, error) {
-	return listService.listRepo.FindAll(repository.QueryOptions{
-		Preload: []string{"Board", "Cards"},
-	})
+	return listService.listRepo.FindAll(repository.ListFullLoad...)
 }
 
 func (listService *ListService) GetListByID(ID string) (*models.List, error) {
-	return listService.listRepo.FindByID(ID, repository.QueryOptions{
-		Preload: []string{"Board", "Cards"},
-	})
+	return listService.listRepo.FindByID(ID, repository.ListFullLoad...)
 }
 
 func (listService *ListService) GetListsByBoardID(boardID string) ([]*models.List, error) {
-	return listService.listRepo.FindByBoardID(boardID, repository.QueryOptions{
-		Preload: []string{"Cards"},
-	})
+	return listService.listRepo.FindByBoardID(boardID, repository.WithPreload("Cards"))
 }
 
 func (listService *ListService) CreateList(data *validators.CreateListValidator) (*models.List, error) {
-	lists, err := listService.listRepo.FindByBoardID(data.BoardID, repository.QueryOptions{})
+	lists, err := listService.listRepo.FindByBoardID(data.BoardID)
 	maxPosition := 0
 
 	if err != nil {
@@ -53,7 +47,7 @@ func (listService *ListService) CreateList(data *validators.CreateListValidator)
 		Color:    data.Color,
 	}
 
-	if err := listService.listRepo.Create(list, repository.QueryOptions{}); err != nil {
+	if err := listService.listRepo.Create(list); err != nil {
 		return nil, err
 	}
 
@@ -61,7 +55,7 @@ func (listService *ListService) CreateList(data *validators.CreateListValidator)
 }
 
 func (listService *ListService) UpdateList(ID string, data *validators.UpdateListValidator) (*models.List, error) {
-	list, err := listService.listRepo.FindByID(ID, repository.QueryOptions{})
+	list, err := listService.listRepo.FindByID(ID)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +72,7 @@ func (listService *ListService) UpdateList(ID string, data *validators.UpdateLis
 		list.Position = *data.Position
 	}
 
-	if err := listService.listRepo.Update(list, repository.QueryOptions{}); err != nil {
+	if err := listService.listRepo.Update(list); err != nil {
 		return nil, err
 	}
 

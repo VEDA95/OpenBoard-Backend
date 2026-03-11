@@ -6,6 +6,11 @@ import (
 	"gorm.io/gorm"
 )
 
+var UserFullLoad = []QueryOption{
+	WithPreload("Roles", "Roles.Permissions"),
+	WithOmit("Sessions"),
+}
+
 type UserRepository struct {
 	db *gorm.DB
 }
@@ -14,59 +19,59 @@ func NewUserRepository(db *gorm.DB) *UserRepository {
 	return &UserRepository{db: db}
 }
 
-func (userRepo *UserRepository) FindAll(options QueryOptions) ([]*models.User, error) {
+func (userRepo *UserRepository) FindAll(opts ...QueryOption) ([]*models.User, error) {
 	users := make([]*models.User, 0)
 
-	if err := options.AppendToQuery(userRepo.db).Find(&users).Error; err != nil {
+	if err := applyOptions(userRepo.db, opts).Find(&users).Error; err != nil {
 		return nil, err
 	}
 
 	return users, nil
 }
 
-func (userRepo *UserRepository) FindByID(ID string, options QueryOptions) (*models.User, error) {
+func (userRepo *UserRepository) FindByID(ID string, opts ...QueryOption) (*models.User, error) {
 	user := new(models.User)
 
-	if err := options.AppendToQuery(userRepo.db).Where("id = ?", ID).First(user).Error; err != nil {
+	if err := applyOptions(userRepo.db, opts).Where("id = ?", ID).First(user).Error; err != nil {
 		return nil, err
 	}
 
 	return user, nil
 }
 
-func (userRepo *UserRepository) FindByUsername(username string, options QueryOptions) (*models.User, error) {
+func (userRepo *UserRepository) FindByUsername(username string, opts ...QueryOption) (*models.User, error) {
 	user := new(models.User)
 
-	if err := options.AppendToQuery(userRepo.db).Where("username = ?", username).First(user).Error; err != nil {
+	if err := applyOptions(userRepo.db, opts).Where("username = ?", username).First(user).Error; err != nil {
 		return nil, err
 	}
 
 	return user, nil
 }
 
-func (userRepo *UserRepository) FindByEmail(email string, options QueryOptions) (*models.User, error) {
+func (userRepo *UserRepository) FindByEmail(email string, opts ...QueryOption) (*models.User, error) {
 	user := new(models.User)
 
-	if err := options.AppendToQuery(userRepo.db).Where("email = ?", email).First(user).Error; err != nil {
+	if err := applyOptions(userRepo.db, opts).Where("email = ?", email).First(user).Error; err != nil {
 		return nil, err
 	}
 
 	return user, nil
 }
 
-func (userRepo *UserRepository) Create(user *models.User, options QueryOptions) error {
-	return options.AppendToQuery(userRepo.db).Create(user).Error
+func (userRepo *UserRepository) Create(user *models.User, opts ...QueryOption) error {
+	return applyOptions(userRepo.db, opts).Create(user).Error
 }
 
-func (userRepo *UserRepository) CreateWithRoles(user *models.User, roleIDs []string, userOptions QueryOptions, roleOptions QueryOptions) error {
+func (userRepo *UserRepository) CreateWithRoles(user *models.User, roleIDs []string, writeOpts []QueryOption, roleOpts ...QueryOption) error {
 	return userRepo.db.Transaction(func(transaction *gorm.DB) error {
 		roles := make([]*models.Role, 0)
 
-		if err := roleOptions.AppendToQuery(transaction).Where("id IN ?", roleIDs).Find(&roles).Error; err != nil {
+		if err := applyOptions(transaction, roleOpts).Where("id IN ?", roleIDs).Find(&roles).Error; err != nil {
 			return err
 		}
 
-		if err := userOptions.AppendToQuery(transaction).Create(user).Error; err != nil {
+		if err := applyOptions(transaction, writeOpts).Create(user).Error; err != nil {
 			return err
 		}
 
@@ -74,15 +79,15 @@ func (userRepo *UserRepository) CreateWithRoles(user *models.User, roleIDs []str
 	})
 }
 
-func (userRepo *UserRepository) Update(user *models.User, options QueryOptions) error {
-	return options.AppendToQuery(userRepo.db).Save(user).Error
+func (userRepo *UserRepository) Update(user *models.User, opts ...QueryOption) error {
+	return applyOptions(userRepo.db, opts).Save(user).Error
 }
 
-func (userRepo *UserRepository) UpdateWithRoles(user *models.User, roleIDs []string, userOptions QueryOptions, roleOptions QueryOptions) error {
+func (userRepo *UserRepository) UpdateWithRoles(user *models.User, roleIDs []string, writeOpts []QueryOption, roleOpts ...QueryOption) error {
 	return userRepo.db.Transaction(func(transaction *gorm.DB) error {
 		roles := make([]*models.Role, 0)
 
-		if err := userOptions.AppendToQuery(transaction).Save(user).Error; err != nil {
+		if err := applyOptions(transaction, writeOpts).Save(user).Error; err != nil {
 			return err
 		}
 
@@ -90,7 +95,7 @@ func (userRepo *UserRepository) UpdateWithRoles(user *models.User, roleIDs []str
 			return nil
 		}
 
-		if err := roleOptions.AppendToQuery(transaction).Where("id IN ?", roleIDs).Find(&roles).Error; err != nil {
+		if err := applyOptions(transaction, roleOpts).Where("id IN ?", roleIDs).Find(&roles).Error; err != nil {
 			return err
 		}
 

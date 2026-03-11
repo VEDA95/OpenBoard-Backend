@@ -15,7 +15,7 @@ func NewPermissionService(permissionRepo *repository.PermissionRepository) *Perm
 }
 
 func (permissionService *PermissionService) GetPermissions() ([]*models.Permission, error) {
-	permissions, err := permissionService.repo.FindAll(repository.QueryOptions{})
+	permissions, err := permissionService.repo.FindAll()
 	if err != nil {
 		return nil, err
 	}
@@ -24,7 +24,7 @@ func (permissionService *PermissionService) GetPermissions() ([]*models.Permissi
 }
 
 func (permissionService *PermissionService) GetPermission(ID string) (*models.Permission, error) {
-	permission, err := permissionService.repo.FindByID(ID, repository.QueryOptions{})
+	permission, err := permissionService.repo.FindByID(ID)
 	if err != nil {
 		return nil, err
 	}
@@ -33,7 +33,7 @@ func (permissionService *PermissionService) GetPermission(ID string) (*models.Pe
 }
 
 func (permissionService *PermissionService) GetPermissionsByPaths(paths ...string) ([]*models.Permission, error) {
-	permissions, err := permissionService.repo.FindByPaths(paths, repository.QueryOptions{})
+	permissions, err := permissionService.repo.FindByPaths(paths)
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +43,7 @@ func (permissionService *PermissionService) GetPermissionsByPaths(paths ...strin
 
 func (permissionService *PermissionService) CreatePermission(data *validators.CreatePermissionValidator) (*models.Permission, error) {
 	permission := &models.Permission{Path: data.Path}
-	if err := permissionService.repo.Create(permission, repository.QueryOptions{}); err != nil {
+	if err := permissionService.repo.Create(permission); err != nil {
 		return nil, err
 	}
 
@@ -51,9 +51,9 @@ func (permissionService *PermissionService) CreatePermission(data *validators.Cr
 }
 
 func (permissionService *PermissionService) UpdatePermission(ID string, data *validators.UpdatePermissionValidator) (*models.Permission, error) {
-	permission, err := permissionService.repo.FindByID(ID, repository.QueryOptions{
-		Select: []string{"id", "path"},
-	})
+	permission, err := permissionService.repo.FindByID(ID,
+		repository.WithSelect("id", "path"),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +62,7 @@ func (permissionService *PermissionService) UpdatePermission(ID string, data *va
 		permission.Path = *data.Path
 	}
 
-	if err := permissionService.repo.Update(permission, repository.QueryOptions{}); err != nil {
+	if err := permissionService.repo.Update(permission); err != nil {
 		return nil, err
 	}
 

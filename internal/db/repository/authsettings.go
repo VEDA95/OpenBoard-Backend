@@ -29,12 +29,31 @@ func (generalSettingsRepo *AuthSettingsRepository) Find() (*models.AuthSettings,
 
 func (generalSettingsRepo *AuthSettingsRepository) Create() error {
 	frontendURL := os.Getenv("FRONTEND_URL")
-
 	if len(frontendURL) == 0 {
 		frontendURL = "http://localhost:3000"
 	}
 
-	return generalSettingsRepo.db.Create(&models.AuthSettings{CORSDomain: frontendURL}).Error
+	rpID := os.Getenv("WEBAUTHN_RP_ID")
+	if len(rpID) == 0 {
+		rpID = "localhost"
+	}
+
+	rpDisplayName := os.Getenv("WEBAUTHN_RP_DISPLAY_NAME")
+	if len(rpDisplayName) == 0 {
+		rpDisplayName = "Open Board"
+	}
+
+	rpOrigins := os.Getenv("WEBAUTHN_RP_ORIGINS")
+	if len(rpOrigins) == 0 {
+		rpOrigins = frontendURL
+	}
+
+	return generalSettingsRepo.db.Create(&models.AuthSettings{
+		CORSDomain:            frontendURL,
+		WebAuthnRPID:          rpID,
+		WebAuthnRPDisplayName: rpDisplayName,
+		WebAuthnRPOrigins:     rpOrigins,
+	}).Error
 }
 
 func (generalSettingsRepo *AuthSettingsRepository) Update(settings *models.AuthSettings) error {

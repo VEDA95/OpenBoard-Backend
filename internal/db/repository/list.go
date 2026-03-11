@@ -6,6 +6,10 @@ import (
 	"gorm.io/gorm"
 )
 
+var ListFullLoad = []QueryOption{
+	WithPreload("Board", "Cards"),
+}
+
 type ListRepository struct {
 	db *gorm.DB
 }
@@ -14,36 +18,36 @@ func NewListRepository(db *gorm.DB) *ListRepository {
 	return &ListRepository{db: db}
 }
 
-func (listRepo *ListRepository) FindAll(options QueryOptions) ([]*models.List, error) {
+func (listRepo *ListRepository) FindAll(opts ...QueryOption) ([]*models.List, error) {
 	lists := make([]*models.List, 0)
-	if err := options.AppendToQuery(listRepo.db).Find(&lists).Error; err != nil {
+	if err := applyOptions(listRepo.db, opts).Find(&lists).Error; err != nil {
 		return nil, err
 	}
 	return lists, nil
 }
 
-func (listRepo *ListRepository) FindByID(ID string, options QueryOptions) (*models.List, error) {
+func (listRepo *ListRepository) FindByID(ID string, opts ...QueryOption) (*models.List, error) {
 	list := new(models.List)
-	if err := options.AppendToQuery(listRepo.db).Where("id = ?", ID).First(list).Error; err != nil {
+	if err := applyOptions(listRepo.db, opts).Where("id = ?", ID).First(list).Error; err != nil {
 		return nil, err
 	}
 	return list, nil
 }
 
-func (listRepo *ListRepository) FindByBoardID(ID string, options QueryOptions) ([]*models.List, error) {
+func (listRepo *ListRepository) FindByBoardID(ID string, opts ...QueryOption) ([]*models.List, error) {
 	lists := make([]*models.List, 0)
-	if err := options.AppendToQuery(listRepo.db).Where("board_id = ?", ID).Order("position ASC").Find(&lists).Error; err != nil {
+	if err := applyOptions(listRepo.db, opts).Where("board_id = ?", ID).Order("position ASC").Find(&lists).Error; err != nil {
 		return nil, err
 	}
 	return lists, nil
 }
 
-func (listRepo *ListRepository) Create(list *models.List, options QueryOptions) error {
-	return options.AppendToQuery(listRepo.db).Create(list).Error
+func (listRepo *ListRepository) Create(list *models.List, opts ...QueryOption) error {
+	return applyOptions(listRepo.db, opts).Create(list).Error
 }
 
-func (listRepo *ListRepository) Update(list *models.List, options QueryOptions) error {
-	return options.AppendToQuery(listRepo.db).Save(list).Error
+func (listRepo *ListRepository) Update(list *models.List, opts ...QueryOption) error {
+	return applyOptions(listRepo.db, opts).Save(list).Error
 }
 
 func (listRepo *ListRepository) Delete(ID string) error {

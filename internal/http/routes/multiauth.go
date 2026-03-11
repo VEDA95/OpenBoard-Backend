@@ -7,22 +7,26 @@ import (
 	"VEDA95/open_board/api/internal/http/validators"
 	"VEDA95/open_board/api/internal/service"
 
+	"github.com/go-webauthn/webauthn/protocol"
 	"github.com/gofiber/fiber/v2"
 )
 
 type MultiAuthHandler struct {
 	multiAuthService *service.MultiAuthService
+	webAuthnService  *service.WebAuthnService
 	emailService     *service.EmailService
 	validator        *validators.Validator
 }
 
 func NewMultiAuthHandler(
 	multiAuthService *service.MultiAuthService,
+	webAuthnService *service.WebAuthnService,
 	emailService *service.EmailService,
 	validator *validators.Validator,
 ) *MultiAuthHandler {
 	return &MultiAuthHandler{
 		multiAuthService: multiAuthService,
+		webAuthnService:  webAuthnService,
 		emailService:     emailService,
 		validator:        validator,
 	}
@@ -226,7 +230,7 @@ func (h *MultiAuthHandler) VerifyEmailTOTPCode(context *fiber.Ctx) error {
 // @Description Returns options for WebAuthn registration ceremony
 // @Summary Get WebAuthn registration options
 // @Tags mfa
-// @Success 200 {object} responses.SuccessResponse[fiber.Map]
+// @Success 200 {object} responses.OkResponse[protocol.CredentialCreation]
 // @Failure 401,500 {object} responses.ErrorResponse[responses.GenericMessage]
 // @Router /auth/mfa/webauthn/register/options [get]
 // @Accept json
@@ -234,47 +238,18 @@ func (h *MultiAuthHandler) VerifyEmailTOTPCode(context *fiber.Ctx) error {
 func (h *MultiAuthHandler) GetWebAuthnRegistrationOptions(context *fiber.Ctx) error {
 	session := context.Locals("auth_session").(models.Session)
 
-	challenge, err := h.multiAuthService.GenerateWebAuthnChallenge()
+	options, err := h.webAuthnService.BeginRegistration(session.User.ID)
 	if err != nil {
-		return err
+		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
 
-	userData, err := h.multiAuthService.GetUserForWebAuthn(session.User.ID)
-	if err != nil {
-		return err
-	}
-
-	// Store challenge in cookie for verification
-	context.Cookie(&fiber.Cookie{
-		Name:     "webauthn_challenge",
-		Value:    challenge,
-		HTTPOnly: true,
-		Secure:   false,
-		Path:     "/",
-		MaxAge:   300, // 5 minutes
-	})
-
-	return responses.JSONResponse(context, fiber.StatusOK, responses.OKResponse(fiber.StatusOK, fiber.Map{
-		"challenge": challenge,
-		"rp": fiber.Map{
-			"name": "Open Board",
-			"id":   context.Hostname(),
-		},
-		"user":             userData,
-		"pubKeyCredParams": getPublicKeyCredentialParams(),
-		"authenticatorSelection": map[string]interface{}{
-			"userVerification": "preferred",
-		},
-		"timeout":     60000,
-		"attestation": "none",
-	}))
+	return responses.JSONResponse(context, fiber.StatusOK, responses.OKResponse(fiber.StatusOK, options))
 }
 
 // SetupWebAuthn completes WebAuthn registration
 // @Description Completes WebAuthn registration with credential
 // @Summary Setup WebAuthn
 // @Tags mfa
-// @Param request body validators.SetupWebAuthnValidator true "Request Data"
 // @Success 201 {object} responses.SuccessResponse[models.MultiAuthMethod]
 // @Failure 400,401,500 {object} responses.ErrorResponse[responses.GenericMessage]
 // @Router /auth/mfa/webauthn/register [post]
@@ -282,20 +257,16 @@ func (h *MultiAuthHandler) GetWebAuthnRegistrationOptions(context *fiber.Ctx) er
 // @Produce json
 func (h *MultiAuthHandler) SetupWebAuthn(context *fiber.Ctx) error {
 	session := context.Locals("auth_session").(models.Session)
-	validatorData := new(validators.SetupWebAuthnValidator)
 
-	if err := context.BodyParser(validatorData); err != nil {
-		return err
+	// The library expects a name for the credential, sent as a query param or header
+	name := context.Query("name", "WebAuthn Credential")
+
+	parsedResponse, err := protocol.ParseCredentialCreationResponseBody(context.Request().BodyStream())
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "failed to parse registration response: "+err.Error())
 	}
 
-	if errs := h.validator.Validate(validatorData); len(errs) > 0 {
-		return errors.CreateValidationError(errs)
-	}
-
-	// Clear challenge cookie
-	context.ClearCookie("webauthn_challenge")
-
-	method, err := h.multiAuthService.SetupWebAuthn(session.User.ID, validatorData)
+	method, err := h.webAuthnService.FinishRegistration(session.User.ID, name, parsedResponse)
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
@@ -315,7 +286,7 @@ func (h *MultiAuthHandler) SetupWebAuthn(context *fiber.Ctx) error {
 // @Description Returns options for WebAuthn authentication ceremony
 // @Summary Get WebAuthn authentication options
 // @Tags mfa
-// @Success 200 {object} responses.SuccessResponse[fiber.Map]
+// @Success 200 {object} responses.OkResponse[protocol.CredentialAssertion]
 // @Failure 401,500 {object} responses.ErrorResponse[responses.GenericMessage]
 // @Router /auth/mfa/webauthn/authenticate/options [get]
 // @Accept json
@@ -323,53 +294,18 @@ func (h *MultiAuthHandler) SetupWebAuthn(context *fiber.Ctx) error {
 func (h *MultiAuthHandler) GetWebAuthnAuthenticationOptions(context *fiber.Ctx) error {
 	session := context.Locals("auth_session").(models.Session)
 
-	challenge, err := h.multiAuthService.GenerateWebAuthnChallenge()
+	options, err := h.webAuthnService.BeginLogin(session.User.ID)
 	if err != nil {
-		return err
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 
-	credentials, err := h.multiAuthService.GetWebAuthnCredentials(session.User.ID)
-	if err != nil {
-		return err
-	}
-
-	if len(credentials) == 0 {
-		return fiber.NewError(fiber.StatusBadRequest, "no WebAuthn credentials registered")
-	}
-
-	// Store challenge in cookie for verification
-	context.Cookie(&fiber.Cookie{
-		Name:     "webauthn_challenge",
-		Value:    challenge,
-		HTTPOnly: true,
-		Secure:   false,
-		Path:     "/",
-		MaxAge:   300, // 5 minutes
-	})
-
-	allowCredentials := make([]fiber.Map, 0)
-	for _, cred := range credentials {
-		// Parse credentials JSON to get credential ID
-		allowCredentials = append(allowCredentials, fiber.Map{
-			"type": "public-key",
-			"id":   cred.ID, // This should be the credential ID from the JSON
-		})
-	}
-
-	return responses.JSONResponse(context, fiber.StatusOK, responses.OKResponse(fiber.StatusOK, fiber.Map{
-		"challenge":        challenge,
-		"rpId":             context.Hostname(),
-		"allowCredentials": allowCredentials,
-		"userVerification": "preferred",
-		"timeout":          60000,
-	}))
+	return responses.JSONResponse(context, fiber.StatusOK, responses.OKResponse(fiber.StatusOK, options))
 }
 
 // VerifyWebAuthn verifies a WebAuthn authentication assertion
 // @Description Verifies a WebAuthn authentication assertion
 // @Summary Verify WebAuthn
 // @Tags mfa
-// @Param request body validators.VerifyWebAuthnValidator true "Request Data"
 // @Success 200 {object} responses.SuccessResponse[responses.GenericMessage]
 // @Failure 400,401,500 {object} responses.ErrorResponse[responses.GenericMessage]
 // @Router /auth/mfa/webauthn/authenticate [post]
@@ -377,20 +313,13 @@ func (h *MultiAuthHandler) GetWebAuthnAuthenticationOptions(context *fiber.Ctx) 
 // @Produce json
 func (h *MultiAuthHandler) VerifyWebAuthn(context *fiber.Ctx) error {
 	session := context.Locals("auth_session").(models.Session)
-	validatorData := new(validators.VerifyWebAuthnValidator)
 
-	if err := context.BodyParser(validatorData); err != nil {
-		return err
+	parsedResponse, err := protocol.ParseCredentialRequestResponseBody(context.Request().BodyStream())
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "failed to parse authentication response: "+err.Error())
 	}
 
-	if errs := h.validator.Validate(validatorData); len(errs) > 0 {
-		return errors.CreateValidationError(errs)
-	}
-
-	// Clear challenge cookie
-	context.ClearCookie("webauthn_challenge")
-
-	if err := h.multiAuthService.VerifyWebAuthn(session.User.ID, validatorData.CredentialID, validatorData.SignCount); err != nil {
+	if err := h.webAuthnService.FinishLogin(session.User.ID, parsedResponse); err != nil {
 		return fiber.NewError(fiber.StatusUnauthorized, err.Error())
 	}
 
@@ -403,7 +332,7 @@ func (h *MultiAuthHandler) VerifyWebAuthn(context *fiber.Ctx) error {
 // @Description Returns all WebAuthn credentials for the authenticated user
 // @Summary Get WebAuthn credentials
 // @Tags mfa
-// @Success 200 {object} responses.SuccessCollectionResponse[models.MultiAuthMethod]
+// @Success 200 {object} responses.OkCollectionResponse[models.MultiAuthMethod]
 // @Failure 401,500 {object} responses.ErrorResponse[responses.GenericMessage]
 // @Router /auth/mfa/webauthn/credentials [get]
 // @Accept json
@@ -411,18 +340,10 @@ func (h *MultiAuthHandler) VerifyWebAuthn(context *fiber.Ctx) error {
 func (h *MultiAuthHandler) GetWebAuthnCredentials(context *fiber.Ctx) error {
 	session := context.Locals("auth_session").(models.Session)
 
-	credentials, err := h.multiAuthService.GetWebAuthnCredentials(session.User.ID)
+	credentials, err := h.webAuthnService.GetCredentials(session.User.ID)
 	if err != nil {
 		return err
 	}
 
 	return responses.JSONResponse(context, fiber.StatusOK, responses.OKCollectionResponse(fiber.StatusOK, credentials))
-}
-
-// Helper function to get public key credential parameters
-func getPublicKeyCredentialParams() []fiber.Map {
-	return []fiber.Map{
-		{"type": "public-key", "alg": -7},   // ES256
-		{"type": "public-key", "alg": -257}, // RS256
-	}
 }

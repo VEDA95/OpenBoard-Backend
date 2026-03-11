@@ -6,6 +6,11 @@ import (
 	"gorm.io/gorm"
 )
 
+var SessionFullLoad = []QueryOption{
+	WithPreload("User", "User.Roles", "User.Roles.Permissions"),
+	WithOmit("User.Sessions"),
+}
+
 type SessionRepository struct {
 	db *gorm.DB
 }
@@ -14,62 +19,62 @@ func NewSessionRepository(db *gorm.DB) *SessionRepository {
 	return &SessionRepository{db: db}
 }
 
-func (sessionRepo *SessionRepository) FindAll(options QueryOptions) ([]*models.Session, error) {
+func (sessionRepo *SessionRepository) FindAll(opts ...QueryOption) ([]*models.Session, error) {
 	sessions := make([]*models.Session, 0)
 
-	if err := options.AppendToQuery(sessionRepo.db).Find(&sessions).Error; err != nil {
+	if err := applyOptions(sessionRepo.db, opts).Find(&sessions).Error; err != nil {
 		return nil, err
 	}
 
 	return sessions, nil
 }
 
-func (sessionRepo *SessionRepository) FindByUser(ID string, options QueryOptions) ([]*models.Session, error) {
+func (sessionRepo *SessionRepository) FindByUser(ID string, opts ...QueryOption) ([]*models.Session, error) {
 	sessions := make([]*models.Session, 0)
 
-	if err := options.AppendToQuery(sessionRepo.db).Where("user_id = ?", ID).Find(&sessions).Error; err != nil {
+	if err := applyOptions(sessionRepo.db, opts).Where("user_id = ?", ID).Find(&sessions).Error; err != nil {
 		return nil, err
 	}
 
 	return sessions, nil
 }
 
-func (sessionRepo *SessionRepository) FindByID(ID string, options QueryOptions) (*models.Session, error) {
+func (sessionRepo *SessionRepository) FindByID(ID string, opts ...QueryOption) (*models.Session, error) {
 	session := new(models.Session)
 
-	if err := options.AppendToQuery(sessionRepo.db).Where("id = ?", ID).First(session).Error; err != nil {
+	if err := applyOptions(sessionRepo.db, opts).Where("id = ?", ID).First(session).Error; err != nil {
 		return nil, err
 	}
 
 	return session, nil
 }
 
-func (sessionRepo *SessionRepository) FindByAccessToken(token string, options QueryOptions) (*models.Session, error) {
+func (sessionRepo *SessionRepository) FindByAccessToken(token string, opts ...QueryOption) (*models.Session, error) {
 	session := new(models.Session)
 
-	if err := options.AppendToQuery(sessionRepo.db).Where("access_token = ?", token).First(session).Error; err != nil {
+	if err := applyOptions(sessionRepo.db, opts).Where("access_token = ?", token).First(session).Error; err != nil {
 		return nil, err
 	}
 
 	return session, nil
 }
 
-func (sessionRepo *SessionRepository) FindByRefreshToken(token string, options QueryOptions) (*models.Session, error) {
+func (sessionRepo *SessionRepository) FindByRefreshToken(token string, opts ...QueryOption) (*models.Session, error) {
 	session := new(models.Session)
 
-	if err := options.AppendToQuery(sessionRepo.db).Where("refresh_token = ?", token).First(session).Error; err != nil {
+	if err := applyOptions(sessionRepo.db, opts).Where("refresh_token = ?", token).First(session).Error; err != nil {
 		return nil, err
 	}
 
 	return session, nil
 }
 
-func (sessionRepo *SessionRepository) Create(session *models.Session, options QueryOptions) error {
-	return options.AppendToQuery(sessionRepo.db).Create(session).Error
+func (sessionRepo *SessionRepository) Create(session *models.Session, opts ...QueryOption) error {
+	return applyOptions(sessionRepo.db, opts).Create(session).Error
 }
 
-func (sessionRepo *SessionRepository) Update(session *models.Session, options QueryOptions) error {
-	return options.AppendToQuery(sessionRepo.db).Save(session).Error
+func (sessionRepo *SessionRepository) Update(session *models.Session, opts ...QueryOption) error {
+	return applyOptions(sessionRepo.db, opts).Save(session).Error
 }
 
 func (sessionRepo *SessionRepository) Delete(ID string) error {

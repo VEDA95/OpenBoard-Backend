@@ -7,7 +7,7 @@ import (
 )
 
 type AuthSettings struct {
-	ID                         int        `gorm:"primaryKey;check:check_single_row_auth,id = 1" json:"id"`
+	ID                         int        `gorm:"primaryKey;check:check_single_row_auth,id = 1" json:"-"`
 	UpdatedAt                  *time.Time `json:"updated_at"`
 	AllowPublicRegistration    bool       `gorm:"default:true" json:"allow_public_registration"`
 	RequireEmailVerification   bool       `gorm:"default:true" json:"require_email_verification"`
@@ -27,6 +27,9 @@ type AuthSettings struct {
 	TwoFactorRequired          bool       `gorm:"default:false" json:"two_factor_required"`
 	EnableOAuth                bool       `gorm:"default:false" json:"enable_oauth"`
 	CORSDomain                 string     `gorm:"type:varchar(255); not null" json:"cors_domain"`
+	WebAuthnRPID               string     `gorm:"type:varchar(255);default:'localhost'" json:"webauthn_rp_id"`
+	WebAuthnRPDisplayName      string     `gorm:"type:varchar(255);default:'Open Board'" json:"webauthn_rp_display_name"`
+	WebAuthnRPOrigins          string     `gorm:"type:text;default:''" json:"webauthn_rp_origins"`
 }
 
 func (a *AuthSettings) BeforeCreate(tx *gorm.DB) error {

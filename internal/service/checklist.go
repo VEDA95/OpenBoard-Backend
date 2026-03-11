@@ -27,22 +27,16 @@ func NewCheckListItemService(
 }
 
 func (service *CheckListItemService) GetCheckListItems() ([]*models.CheckListItem, error) {
-	return service.checkListItemRepo.FindAll(repository.QueryOptions{
-		Preload: []string{"Card"},
-	})
+	return service.checkListItemRepo.FindAll(repository.WithPreload("Card"))
 }
 
 func (service *CheckListItemService) GetCheckListItemByID(ID string) (*models.CheckListItem, error) {
-	return service.checkListItemRepo.FindByID(ID, repository.QueryOptions{
-		Preload: []string{"Card"},
-	})
+	return service.checkListItemRepo.FindByID(ID, repository.WithPreload("Card"))
 }
 
 func (service *CheckListItemService) GetCheckListItemsByCardID(cardID string) ([]*models.CheckListItem, error) {
 	items := make([]*models.CheckListItem, 0)
-	allItems, err := service.checkListItemRepo.FindAll(repository.QueryOptions{
-		Omit: []string{"Card"},
-	})
+	allItems, err := service.checkListItemRepo.FindAll(repository.WithOmit("Card"))
 	if err != nil {
 		return nil, err
 	}
@@ -88,7 +82,7 @@ func (service *CheckListItemService) CreateCheckListItem(data *validators.Create
 		checkListItem.Position = *data.Position
 	}
 
-	if err := service.checkListItemRepo.Create(checkListItem, repository.QueryOptions{}); err != nil {
+	if err := service.checkListItemRepo.Create(checkListItem); err != nil {
 		return nil, err
 	}
 
@@ -97,7 +91,7 @@ func (service *CheckListItemService) CreateCheckListItem(data *validators.Create
 		UserID:   data.UserID,
 		CardID:   data.CardID,
 	}
-	if err := service.activityRepo.Create(activity, repository.QueryOptions{}); err != nil {
+	if err := service.activityRepo.Create(activity); err != nil {
 		return nil, err
 	}
 
@@ -105,9 +99,9 @@ func (service *CheckListItemService) CreateCheckListItem(data *validators.Create
 }
 
 func (service *CheckListItemService) UpdateCheckListItem(ID string, userID string, data *validators.UpdateCheckListItemValidator) (*models.CheckListItem, error) {
-	checkListItem, err := service.checkListItemRepo.FindByID(ID, repository.QueryOptions{
-		Preload: []string{"Card", "Card.List", "Card.List.Board"},
-	})
+	checkListItem, err := service.checkListItemRepo.FindByID(ID,
+		repository.WithPreload("Card", "Card.List", "Card.List.Board"),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -141,7 +135,7 @@ func (service *CheckListItemService) UpdateCheckListItem(ID string, userID strin
 		return checkListItem, nil
 	}
 
-	if err := service.checkListItemRepo.Update(checkListItem, repository.QueryOptions{}); err != nil {
+	if err := service.checkListItemRepo.Update(checkListItem); err != nil {
 		return nil, err
 	}
 
@@ -152,7 +146,7 @@ func (service *CheckListItemService) UpdateCheckListItem(ID string, userID strin
 			CardID:   checkListItem.CardID,
 		}
 
-		if err := service.activityRepo.Create(activity, repository.QueryOptions{}); err != nil {
+		if err := service.activityRepo.Create(activity); err != nil {
 			return nil, err
 		}
 	}
@@ -161,9 +155,9 @@ func (service *CheckListItemService) UpdateCheckListItem(ID string, userID strin
 }
 
 func (service *CheckListItemService) DeleteCheckListItem(ID string, userID string) error {
-	checkListItem, err := service.checkListItemRepo.FindByID(ID, repository.QueryOptions{
-		Preload: []string{"Card", "Card.List", "Card.List.Board"},
-	})
+	checkListItem, err := service.checkListItemRepo.FindByID(ID,
+		repository.WithPreload("Card", "Card.List", "Card.List.Board"),
+	)
 	if err != nil {
 		return err
 	}
@@ -178,7 +172,7 @@ func (service *CheckListItemService) DeleteCheckListItem(ID string, userID strin
 		CardID:   checkListItem.CardID,
 	}
 
-	if err := service.activityRepo.Create(activity, repository.QueryOptions{}); err != nil {
+	if err := service.activityRepo.Create(activity); err != nil {
 		return err
 	}
 
@@ -196,7 +190,7 @@ func (service *CheckListItemService) ReorderCheckListItems(ID string, data *vali
 		CardID:   data.CardID,
 	}
 
-	if err := service.activityRepo.Create(activity, repository.QueryOptions{}); err != nil {
+	if err := service.activityRepo.Create(activity); err != nil {
 		return err
 	}
 

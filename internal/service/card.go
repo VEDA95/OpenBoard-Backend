@@ -15,22 +15,18 @@ func NewCardService(cardRepo *repository.CardRepository) *CardService {
 }
 
 func (cardService *CardService) GetCards() ([]*models.Card, error) {
-	return cardService.cardRepo.FindAll(repository.QueryOptions{
-		Preload: []string{"List", "Labels", "Comments", "Comments.User"},
-	})
+	return cardService.cardRepo.FindAll(repository.CardFullLoad...)
 }
 
 func (cardService *CardService) GetCardByID(ID string) (*models.Card, error) {
-	return cardService.cardRepo.FindByID(ID, repository.QueryOptions{
-		Preload: []string{"List", "Labels", "Comments", "Comments.User", "Activities", "Attachments"},
-	})
+	return cardService.cardRepo.FindByID(ID, repository.CardDetailLoad...)
 }
 
 func (cardService *CardService) CreateCard(data *validators.CreateCardValidator) (*models.Card, error) {
-	cards, err := cardService.cardRepo.FindAll(repository.QueryOptions{
-		Select: []string{"position"},
-		Omit:   []string{"Comments", "Labels", "Activities", "Attachments"},
-	})
+	cards, err := cardService.cardRepo.FindAll(
+		repository.WithSelect("position"),
+		repository.WithOmit("Comments", "Labels", "Activities", "Attachments"),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -70,9 +66,6 @@ func (cardService *CardService) CreateCard(data *validators.CreateCardValidator)
 		card,
 		labelIDs,
 		attachmentIDs,
-		repository.QueryOptions{},
-		repository.QueryOptions{},
-		repository.QueryOptions{},
 	); err != nil {
 		return nil, err
 	}
@@ -81,7 +74,7 @@ func (cardService *CardService) CreateCard(data *validators.CreateCardValidator)
 }
 
 func (cardService *CardService) UpdateCard(ID string, data *validators.UpdateCardValidator) (*models.Card, error) {
-	card, err := cardService.cardRepo.FindByID(ID, repository.QueryOptions{})
+	card, err := cardService.cardRepo.FindByID(ID)
 	if err != nil {
 		return nil, err
 	}
@@ -110,9 +103,6 @@ func (cardService *CardService) UpdateCard(ID string, data *validators.UpdateCar
 		card,
 		data.LabelIDs,
 		data.AttachmentIDs,
-		repository.QueryOptions{},
-		repository.QueryOptions{},
-		repository.QueryOptions{},
 	); err != nil {
 		return nil, err
 	}
@@ -121,7 +111,7 @@ func (cardService *CardService) UpdateCard(ID string, data *validators.UpdateCar
 }
 
 func (cardService *CardService) MoveCard(ID string, data *validators.MoveCardValidator) (*models.Card, error) {
-	card, err := cardService.cardRepo.FindByID(ID, repository.QueryOptions{})
+	card, err := cardService.cardRepo.FindByID(ID)
 	if err != nil {
 		return nil, err
 	}
@@ -134,7 +124,7 @@ func (cardService *CardService) MoveCard(ID string, data *validators.MoveCardVal
 		card.Position = *data.Position
 	}
 
-	if err := cardService.cardRepo.Update(card, repository.QueryOptions{}); err != nil {
+	if err := cardService.cardRepo.Update(card); err != nil {
 		return nil, err
 	}
 

@@ -109,6 +109,12 @@ func main() {
 	externalProviderService := service.NewExternalAuthProviderService(externalProviderRepo, userRepo, sessionRepo, roleRepo, authSettingsRepo)
 	emailVerificationService := service.NewEmailVerificationService(emailVerificationRepo, userRepo, authSettingsRepo)
 	multiAuthService := service.NewMultiAuthService(multiAuthRepo, userRepo, authSettingsRepo)
+
+	webAuthnService, err := service.NewWebAuthnService(multiAuthRepo, userRepo, authSettingsRepo)
+	if err != nil {
+		applogger.Global.Fatal().Err(err).Msg("failed to initialize WebAuthn service")
+	}
+
 	validator := validators.NewValidator()
 	wsManager := websocket.NewWebsocketConnectionManager(authService, validator)
 	settingsHandler := routes.NewSettingsHandler(settingsService, emailService, validator)
@@ -125,7 +131,7 @@ func main() {
 	commentHandler := routes.NewCommentHandler(commentService, validator)
 	externalProviderHandler := routes.NewExternalProviderHandler(externalProviderService, settingsService, validator)
 	emailVerificationHandler := routes.NewEmailVerificationHandler(emailVerificationService, emailService, validator)
-	multiAuthHandler := routes.NewMultiAuthHandler(multiAuthService, emailService, validator)
+	multiAuthHandler := routes.NewMultiAuthHandler(multiAuthService, webAuthnService, emailService, validator)
 	authMiddleware := middleware.NewAuthMiddleware(authService)
 
 	app := fiber.New(fiber.Config{

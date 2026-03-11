@@ -21,35 +21,29 @@ func NewCommentService(commentRepo *repository.CommentRepository, cardRepo *repo
 }
 
 func (commentService *CommentService) GetComments() ([]*models.Comment, error) {
-	return commentService.commentRepo.FindAll(repository.QueryOptions{
-		Preload: []string{"User", "Card"},
-	})
+	return commentService.commentRepo.FindAll(repository.CommentFullLoad...)
 }
 
 func (commentService *CommentService) GetCommentByID(ID string) (*models.Comment, error) {
-	return commentService.commentRepo.FindByID(ID, repository.QueryOptions{
-		Preload: []string{"User", "Card"},
-	})
+	return commentService.commentRepo.FindByID(ID, repository.CommentFullLoad...)
 }
 
 func (commentService *CommentService) GetCommentsByCardID(cardID string) ([]*models.Comment, error) {
-	return commentService.commentRepo.FindByCardID(cardID, repository.QueryOptions{
-		Preload: []string{"User"},
-		Omit:    []string{"Card"},
-	})
+	return commentService.commentRepo.FindByCardID(cardID,
+		repository.WithPreload("User"),
+		repository.WithOmit("Card"),
+	)
 }
 
 func (commentService *CommentService) GetCommentsByUserID(userID string) ([]*models.Comment, error) {
-	return commentService.commentRepo.FindByUserID(userID, repository.QueryOptions{
-		Preload: []string{"Card"},
-		Omit:    []string{"User"},
-	})
+	return commentService.commentRepo.FindByUserID(userID,
+		repository.WithPreload("Card"),
+		repository.WithOmit("User"),
+	)
 }
 
 func (commentService *CommentService) CreateComment(data *validators.CreateCommentValidator, userID string) (*models.Comment, error) {
-	card, err := commentService.cardRepo.FindByID(data.CardID, repository.QueryOptions{
-		Select: []string{"id"},
-	})
+	card, err := commentService.cardRepo.FindByID(data.CardID, repository.IDOnly...)
 	if err != nil {
 		return nil, errors.New("card not found")
 	}
@@ -60,17 +54,17 @@ func (commentService *CommentService) CreateComment(data *validators.CreateComme
 		UserID:  userID,
 	}
 
-	if err := commentService.commentRepo.Create(comment, repository.QueryOptions{
-		Omit: []string{"User", "Card"},
-	}); err != nil {
+	if err := commentService.commentRepo.Create(comment,
+		repository.WithOmit("User", "Card"),
+	); err != nil {
 		return nil, err
 	}
 
 	// Load the user data for the response
-	createdComment, err := commentService.commentRepo.FindByID(comment.ID, repository.QueryOptions{
-		Preload: []string{"User"},
-		Omit:    []string{"Card"},
-	})
+	createdComment, err := commentService.commentRepo.FindByID(comment.ID,
+		repository.WithPreload("User"),
+		repository.WithOmit("Card"),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -79,9 +73,9 @@ func (commentService *CommentService) CreateComment(data *validators.CreateComme
 }
 
 func (commentService *CommentService) UpdateComment(ID string, data *validators.UpdateCommentValidator, userID string) (*models.Comment, error) {
-	comment, err := commentService.commentRepo.FindByID(ID, repository.QueryOptions{
-		Select: []string{"id", "user_id", "comment"},
-	})
+	comment, err := commentService.commentRepo.FindByID(ID,
+		repository.WithSelect("id", "user_id", "comment"),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -95,17 +89,17 @@ func (commentService *CommentService) UpdateComment(ID string, data *validators.
 		comment.Comment = *data.Comment
 	}
 
-	if err := commentService.commentRepo.Update(comment, repository.QueryOptions{
-		Select: []string{"comment", "updated_at"},
-	}); err != nil {
+	if err := commentService.commentRepo.Update(comment,
+		repository.WithSelect("comment", "updated_at"),
+	); err != nil {
 		return nil, err
 	}
 
 	// Reload with user data
-	updatedComment, err := commentService.commentRepo.FindByID(ID, repository.QueryOptions{
-		Preload: []string{"User"},
-		Omit:    []string{"Card"},
-	})
+	updatedComment, err := commentService.commentRepo.FindByID(ID,
+		repository.WithPreload("User"),
+		repository.WithOmit("Card"),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -114,9 +108,9 @@ func (commentService *CommentService) UpdateComment(ID string, data *validators.
 }
 
 func (commentService *CommentService) DeleteComment(ID string, userID string) error {
-	comment, err := commentService.commentRepo.FindByID(ID, repository.QueryOptions{
-		Select: []string{"id", "user_id"},
-	})
+	comment, err := commentService.commentRepo.FindByID(ID,
+		repository.WithSelect("id", "user_id"),
+	)
 	if err != nil {
 		return err
 	}

@@ -6,6 +6,11 @@ import (
 	"gorm.io/gorm"
 )
 
+var BoardFullLoad = []QueryOption{
+	WithPreload("User", "Permissions", "Workspace", "Lists"),
+	WithOmit("UserID", "WorkspaceID"),
+}
+
 type BoardRepository struct {
 	db *gorm.DB
 }
@@ -14,37 +19,37 @@ func NewBoardRepository(db *gorm.DB) *BoardRepository {
 	return &BoardRepository{db: db}
 }
 
-func (boardRepo *BoardRepository) FindAll(options QueryOptions) ([]*models.Board, error) {
+func (boardRepo *BoardRepository) FindAll(opts ...QueryOption) ([]*models.Board, error) {
 	boards := make([]*models.Board, 0)
-	if err := options.AppendToQuery(boardRepo.db).Find(&boards).Error; err != nil {
+	if err := applyOptions(boardRepo.db, opts).Find(&boards).Error; err != nil {
 		return nil, err
 	}
 
 	return boards, nil
 }
 
-func (boardRepo *BoardRepository) FindByID(ID string, options QueryOptions) (*models.Board, error) {
+func (boardRepo *BoardRepository) FindByID(ID string, opts ...QueryOption) (*models.Board, error) {
 	board := new(models.Board)
-	if err := options.AppendToQuery(boardRepo.db).Where("id = ?", ID).First(board).Error; err != nil {
+	if err := applyOptions(boardRepo.db, opts).Where("id = ?", ID).First(board).Error; err != nil {
 		return nil, err
 	}
 
 	return board, nil
 }
 
-func (boardRepo *BoardRepository) FindByUserID(ID string, options QueryOptions) ([]*models.Board, error) {
+func (boardRepo *BoardRepository) FindByUserID(ID string, opts ...QueryOption) ([]*models.Board, error) {
 	boards := make([]*models.Board, 0)
 
-	if err := options.AppendToQuery(boardRepo.db).Where("user_id = ?", ID).Find(&boards).Error; err != nil {
+	if err := applyOptions(boardRepo.db, opts).Where("user_id = ?", ID).Find(&boards).Error; err != nil {
 		return nil, err
 	}
 
 	return boards, nil
 }
 
-func (boardRepo *BoardRepository) Create(board *models.Board, options QueryOptions) error {
+func (boardRepo *BoardRepository) Create(board *models.Board, opts ...QueryOption) error {
 	return boardRepo.db.Transaction(func(transaction *gorm.DB) error {
-		if err := options.AppendToQuery(transaction).Create(board).Error; err != nil {
+		if err := applyOptions(transaction, opts).Create(board).Error; err != nil {
 			return err
 		}
 
@@ -59,14 +64,14 @@ func (boardRepo *BoardRepository) Create(board *models.Board, options QueryOptio
 	})
 }
 
-func (boardRepo *BoardRepository) CreateWithPermissions(board *models.Board, permissionIDs []string, options QueryOptions, permissionOptions QueryOptions) error {
+func (boardRepo *BoardRepository) CreateWithPermissions(board *models.Board, permissionIDs []string, reloadOpts ...QueryOption) error {
 	return boardRepo.db.Transaction(func(transaction *gorm.DB) error {
 		permissions := make([]*models.Permission, 0)
-		if err := permissionOptions.AppendToQuery(transaction).Where("id IN ?", permissionIDs).Find(&permissions).Error; err != nil {
+		if err := transaction.Where("id IN ?", permissionIDs).Find(&permissions).Error; err != nil {
 			return err
 		}
 
-		if err := options.AppendToQuery(transaction).Create(board).Error; err != nil {
+		if err := transaction.Create(board).Error; err != nil {
 			return err
 		}
 
@@ -81,30 +86,36 @@ func (boardRepo *BoardRepository) CreateWithPermissions(board *models.Board, per
 			return err
 		}
 
-		if len(permissions) == 0 {
-			return nil
+		if len(permissions) > 0 {
+			if err := transaction.Model(board).Association("Permissions").Append(permissions); err != nil {
+				return err
+			}
 		}
 
-		return transaction.Model(board).Association("Permissions").Append(permissions)
+		return applyOptions(transaction, reloadOpts).First(board, "id = ?", board.ID).Error
 	})
 }
 
-func (boardRepo *BoardRepository) Update(board *models.Board, options QueryOptions) error {
-	return options.AppendToQuery(boardRepo.db).Save(board).Error
+func (boardRepo *BoardRepository) Update(board *models.Board, opts ...QueryOption) error {
+	return applyOptions(boardRepo.db, opts).Save(board).Error
 }
 
-func (boardRepo *BoardRepository) UpdateWithPermissions(board *models.Board, permissionIDs []string, options QueryOptions, permissionOptions QueryOptions) error {
+func (boardRepo *BoardRepository) UpdateWithPermissions(board *models.Board, permissionIDs []string, reloadOpts ...QueryOption) error {
 	return boardRepo.db.Transaction(func(transaction *gorm.DB) error {
 		permissions := make([]*models.Permission, 0)
-		if err := permissionOptions.AppendToQuery(transaction).Where("id IN ?", permissionIDs).Find(&permissions).Error; err != nil {
+		if err := transaction.Where("id IN ?", permissionIDs).Find(&permissions).Error; err != nil {
 			return err
 		}
 
-		if err := options.AppendToQuery(transaction).Create(board).Error; err != nil {
+		if err := transaction.Save(board).Error; err != nil {
 			return err
 		}
 
-		return transaction.Model(board).Association("Permissions").Replace(permissions)
+		if err := transaction.Model(board).Association("Permissions").Replace(permissions); err != nil {
+			return err
+		}
+
+		return applyOptions(transaction, reloadOpts).First(board, "id = ?", board.ID).Error
 	})
 }
 

@@ -54,13 +54,18 @@ func (workspaceHandler *WorkspaceHandler) GETByID(context *fiber.Ctx) error {
 }
 
 func (workspaceHandler *WorkspaceHandler) POST(context *fiber.Ctx) error {
+	session := context.Locals("auth_session").(models.Session)
 	validatorData := new(validators.CreateWorkspaceValidator)
 
 	if err := context.BodyParser(validatorData); err != nil {
 		return err
 	}
 
-	workspace, err := workspaceHandler.workspaceService.CreateWorkspace(validatorData)
+	if errs := workspaceHandler.validator.Validate(validatorData); len(errs) > 0 {
+		return errors.CreateValidationError(errs)
+	}
+
+	workspace, err := workspaceHandler.workspaceService.CreateWorkspace(session.User, validatorData)
 	if err != nil {
 		return err
 	}

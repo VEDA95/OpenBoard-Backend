@@ -14,62 +14,62 @@ func NewMultiAuthMethodRepository(db *gorm.DB) *MultiAuthMethodRepository {
 	return &MultiAuthMethodRepository{db: db}
 }
 
-func (repo *MultiAuthMethodRepository) FindAll(options QueryOptions) ([]*models.MultiAuthMethod, error) {
+func (repo *MultiAuthMethodRepository) FindAll(opts ...QueryOption) ([]*models.MultiAuthMethod, error) {
 	methods := make([]*models.MultiAuthMethod, 0)
 
-	if err := options.AppendToQuery(repo.db).Find(&methods).Error; err != nil {
+	if err := applyOptions(repo.db, opts).Find(&methods).Error; err != nil {
 		return nil, err
 	}
 
 	return methods, nil
 }
 
-func (repo *MultiAuthMethodRepository) FindByID(ID string, options QueryOptions) (*models.MultiAuthMethod, error) {
+func (repo *MultiAuthMethodRepository) FindByID(ID string, opts ...QueryOption) (*models.MultiAuthMethod, error) {
 	method := new(models.MultiAuthMethod)
 
-	if err := options.AppendToQuery(repo.db).Where("id = ?", ID).First(method).Error; err != nil {
+	if err := applyOptions(repo.db, opts).Where("id = ?", ID).First(method).Error; err != nil {
 		return nil, err
 	}
 
 	return method, nil
 }
 
-func (repo *MultiAuthMethodRepository) FindByUserID(userID string, options QueryOptions) ([]*models.MultiAuthMethod, error) {
+func (repo *MultiAuthMethodRepository) FindByUserID(userID string, opts ...QueryOption) ([]*models.MultiAuthMethod, error) {
 	methods := make([]*models.MultiAuthMethod, 0)
 
-	if err := options.AppendToQuery(repo.db).Where("user_id = ?", userID).Find(&methods).Error; err != nil {
+	if err := applyOptions(repo.db, opts).Where("user_id = ?", userID).Find(&methods).Error; err != nil {
 		return nil, err
 	}
 
 	return methods, nil
 }
 
-func (repo *MultiAuthMethodRepository) FindByUserIDAndType(userID string, methodType string, options QueryOptions) (*models.MultiAuthMethod, error) {
+func (repo *MultiAuthMethodRepository) FindByUserIDAndType(userID string, methodType string, opts ...QueryOption) (*models.MultiAuthMethod, error) {
 	method := new(models.MultiAuthMethod)
 
-	if err := options.AppendToQuery(repo.db).Where("user_id = ? AND type = ?", userID, methodType).First(method).Error; err != nil {
+	if err := applyOptions(repo.db, opts).Where("user_id = ? AND type = ?", userID, methodType).First(method).Error; err != nil {
 		return nil, err
 	}
 
 	return method, nil
 }
 
-func (repo *MultiAuthMethodRepository) FindByUserIDAndName(userID string, name string, options QueryOptions) (*models.MultiAuthMethod, error) {
+func (repo *MultiAuthMethodRepository) FindByUserIDAndName(userID string, name string, opts ...QueryOption) (*models.MultiAuthMethod, error) {
 	method := new(models.MultiAuthMethod)
 
-	if err := options.AppendToQuery(repo.db).Where("user_id = ? AND name = ?", userID, name).First(method).Error; err != nil {
+	if err := applyOptions(repo.db, opts).Where("user_id = ? AND name = ?", userID, name).First(method).Error; err != nil {
 		return nil, err
 	}
 
 	return method, nil
 }
 
-func (repo *MultiAuthMethodRepository) Create(method *models.MultiAuthMethod, options QueryOptions) error {
-	return options.AppendToQuery(repo.db).Create(method).Error
+func (repo *MultiAuthMethodRepository) Create(method *models.MultiAuthMethod, opts ...QueryOption) error {
+	return applyOptions(repo.db, opts).Create(method).Error
 }
 
-func (repo *MultiAuthMethodRepository) Update(method *models.MultiAuthMethod, options QueryOptions) error {
-	return options.AppendToQuery(repo.db).Save(method).Error
+func (repo *MultiAuthMethodRepository) Update(method *models.MultiAuthMethod, opts ...QueryOption) error {
+	return applyOptions(repo.db, opts).Save(method).Error
 }
 
 func (repo *MultiAuthMethodRepository) Delete(ID string) error {
